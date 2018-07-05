@@ -1,11 +1,14 @@
 module Typecheck where
 
-open import Data.Product
-open import Data.Nat
+open import Data.Product as Product
+open import Data.Nat as ℕ
 open import Data.Sum as Sum
 open import Data.String
 open import Data.List hiding (lookup)
 open import Data.List.All hiding (lookup)
+open import Data.Maybe hiding (All ; monad)
+open import Relation.Nullary
+open import Relation.Binary.PropositionalEquality
 open import Function
 
 open import Category.Monad
@@ -29,10 +32,10 @@ support []       []       = []
 support (m ∷ ms) (σ ∷ σs) = (m , σ) ∷ support ms σs
 
 Var- : Mode → List Mode → Set
-Var- m Γ = ∀ γ → ∃ λ σ → Var σ (support Γ γ)
+Var- m Γ = ∀ γ → m ≡ Infer × ∃ λ σ → Var (m , σ) (support Γ γ)
 
 th^Var- : ∀ {m} → Thinnable (Var- m)
-th^Var- v ρ δ = map₂ (unwind _ δ ρ) $ v (rewind _ δ ρ) where
+th^Var- v ρ δ = map₂ (map₂ $ unwind _ δ ρ) $ v (rewind _ δ ρ) where
 
   rewind : ∀ Γ {Δ} → Typing Δ → Thinning Γ Δ → Typing Γ
   rewind []      δ ρ = []
@@ -65,9 +68,17 @@ open RawMonad monad hiding (return)
 Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck {m} = th^Var- {m}
 Sem.var   Typecheck {m} = case m return (λ m → Var- m _ → Type- m _) of λ where
-  Infer v γ → {!!}
-  Check → {!!}
-Sem.alg   Typecheck = {!!}
+  Infer v γ → inj₂ (Product.map₂ `var (proj₂ $ v γ))
+  Check v γ → case (proj₁ $ v γ) of λ ()
+Sem.alg   Typecheck = λ where
+  (r > t `∶' σ) γ   → Sum.map id (,_ ∘ (r >_`∶ σ)) (t γ σ)
+  (r > f `$' t) γ   → {!!}
+  (r >`λ' b)    γ σ → {!!}
+  (r >`-' t)    γ σ → do
+    (τ , t′) ← t γ
+    eq ← maybe′ inj₂ (inj₁ (r , Expected σ Got τ)) (decToMaybe $ eqdecType ℕ._≟_ τ σ)
+    pure $ r >`- subst (λ σ → Typed (Infer , σ) _) eq t′
+
 
 typecheck : Scoped Infer [] → Result (∃ λ σ → Typed (Infer , σ) [])
 typecheck t = Sem.closed Typecheck t []

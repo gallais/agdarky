@@ -10,7 +10,10 @@ open import Data.List.All
 open import Data.List.Membership.Propositional
 open import Data.String as String
 open import Function
+open import Function.Equivalence
 open import Relation.Nullary
+open import Relation.Nullary.Decidable as RNDec
+open import Relation.Nullary.Product
 open import Relation.Binary using (Decidable)
 open import Relation.Binary.PropositionalEquality
 
@@ -32,6 +35,21 @@ eqdecMode Infer Infer = yes refl
 eqdecMode Infer Check = no (λ ())
 eqdecMode Check Infer = no (λ ())
 eqdecMode Check Check = yes refl
+
+module _ {A : Set} where
+
+ α-equivalence : {a₁ a₂ : A} → (a₁ ≡ a₂) ⇔ (α a₁ ≡ α a₂)
+ α-equivalence = equivalence (cong α) (λ where refl → refl)
+
+ ⇒-equivalence : {σ₁ σ₂ τ₁ τ₂ : Type A} →
+                 (σ₁ ≡ σ₂ × τ₁ ≡ τ₂) ⇔ (σ₁ ⇒ τ₁ ≡ σ₂ ⇒ τ₂)
+ ⇒-equivalence = equivalence (uncurry (cong₂ _⇒_)) (λ where refl → refl , refl)
+
+ eqdecType : Decidable {A = A} _≡_ → Decidable {A = Type A} _≡_
+ eqdecType eq (α a₁)    (α a₂)    = RNDec.map α-equivalence (eq a₁ a₂)
+ eqdecType eq (σ₁ ⇒ τ₁) (σ₂ ⇒ τ₂) = RNDec.map ⇒-equivalence (eqdecType eq σ₁ σ₂ ×-dec eqdecType eq τ₁ τ₂)
+ eqdecType eq (α _)     (_ ⇒ _)   = no (λ ())
+ eqdecType eq (_ ⇒ _)   (α _)     = no (λ ())
 
 data `Bidi : Set where
   Cut App Lam Emb : `Bidi
