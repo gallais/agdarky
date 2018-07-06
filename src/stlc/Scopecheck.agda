@@ -4,11 +4,9 @@ open import Data.Product as Product
 open import Data.Nat
 open import Data.String as String
 open import Data.Maybe as Maybe
-open import Data.Sum
-open import Data.List
+open import Data.List using ([])
 open import Data.List.All using ([])
 open import Function
-open import Relation.Nullary
 
 open import Category.Monad
 open import Category.Monad.State

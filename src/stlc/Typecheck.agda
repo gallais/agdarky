@@ -3,13 +3,11 @@ module Typecheck where
 open import Data.Product as Product
 open import Data.Nat as ℕ hiding (_>_)
 open import Data.Sum as Sum
-open import Data.String
 open import Data.List hiding (lookup ; fromMaybe)
 open import Data.List.All hiding (lookup)
 open import Data.Maybe hiding (All ; monad)
-open import Relation.Nullary
-open import Relation.Binary.PropositionalEquality
 open import Function
+open import Relation.Binary.PropositionalEquality
 
 open import Category.Monad
 
@@ -56,7 +54,7 @@ th^Var- v ρ δ = map₂ (map₂ $ unwind _ δ ρ) $ v (rewind _ δ ρ) where
 
 
 isArrow : (σ⇒τ : Type ℕ) → Maybe (Σ[ στ ∈ Type ℕ × Type ℕ ] σ⇒τ ≡ uncurry _⇒_ στ)
-isArrow (α _)   = nothing
+isArrow (α _) = nothing
 isArrow (σ ⇒ τ) = just ( _ , refl)
 
 Type- : Mode → List Mode → Set
@@ -90,6 +88,6 @@ Type-_ed : Mode → Set
 Type- Infer ed = Result (∃ λ σ → Typed (Infer , σ) [])
 Type- Check ed = ∀ σ → Result (Typed (Check , σ) [])
 
-typecheck : ∀ m → Scoped m [] → Type- m ed
-typecheck Infer t = Sem.closed Typecheck t []
-typecheck Check t = Sem.closed Typecheck t []
+typecheck : ∀ {m} → Scoped m [] → Type- m ed
+typecheck {Infer} t = Sem.closed Typecheck t []
+typecheck {Check} t = Sem.closed Typecheck t []

@@ -1,13 +1,10 @@
 module Language where
 
-open import Size
 open import Data.Unit
 open import Data.Product hiding (,_)
 open import Data.Nat
-open import Data.Fin
 open import Data.List as List
-open import Data.List.All
-open import Data.List.Membership.Propositional
+open import Data.List.All -- important for the pattern synonyms!
 open import Data.String as String
 open import Function
 open import Function.Equivalence
@@ -76,11 +73,11 @@ module Surface where
     Lam → `κ ⊤      `× `X (Infer ∷ []) Check (`∎ Check)
     Emb → `κ ⊤      `× `X [] Infer (`∎ Check)
 
-  Parsed : {i : Size} → Mode → Set
-  Parsed {i} = Raw (surface String) i
+  Parsed : Mode → Set
+  Parsed = Raw (surface String) _
 
-  Scoped : {i : Size} → Mode → List Mode → Set
-  Scoped {i} = Tm (surface ℕ) i
+  Scoped : Mode → List Mode → Set
+  Scoped = Tm (surface ℕ) _
 
 
 module Internal where
@@ -96,8 +93,8 @@ module Internal where
     Emb → `σ (Type ℕ)          $ λ σ →
           `X [] (Infer , σ) (`∎ (Check , σ))
 
-  Typed : {i : Size} → (Mode × Type ℕ) → List (Mode × Type ℕ) → Set
-  Typed {i} = Tm internal i
+  Typed : (Mode × Type ℕ) → List (Mode × Type ℕ) → Set
+  Typed = Tm internal _
 
 
 -- Traditional pattern synonyms (usable on the LHS only)
