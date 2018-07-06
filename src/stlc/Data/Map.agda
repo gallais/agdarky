@@ -16,6 +16,9 @@ module Map {A : Set} (eq? : Decidable {A = A} _≡_) (B : Set)  where
   Map : Set
   Map = List (A × B)
 
+  RMap : Set
+  RMap = List (B × A)
+
   empty : Map
   empty = []
 
@@ -25,3 +28,6 @@ module Map {A : Set} (eq? : Decidable {A = A} _≡_) (B : Set)  where
   assoc : A → Map → Maybe B
   assoc a = flip foldr nothing $ uncurry $ λ a′ b ih →
     if ⌊ eq? a a′ ⌋ then just b else nothing
+
+  invert : Map → RMap
+  invert = List.map swap

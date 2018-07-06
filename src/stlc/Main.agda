@@ -9,6 +9,7 @@ open import Data.List as List
 open import Function
 
 open import Language
+open import Types
 open import Parse
 open import Scopecheck
 open import Typecheck
@@ -19,11 +20,11 @@ open import Category.Monad
 open import Text.Parser.Types
 open import Text.Parser.Position
 
-open RawMonad {Level.zero} (Monad-⊎ {String})
+open RawMonad monad
 
-pipeline : String → String ⊎ String
+pipeline : String → Result String
 pipeline str = do
   parsed        ← parse str
   (scoped , mp) ← scopecheck parsed
-  (σ , typed)   ← Sum.map (λ _ → "Typechecking error") id $ typecheck Infer scoped
-  pure $ print typed (List.map Product.swap mp)
+  (σ , typed)   ← typecheck Infer scoped
+  pure $ print typed mp

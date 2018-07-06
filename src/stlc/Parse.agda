@@ -2,11 +2,12 @@ module Parse where
 
 import Level
 open import Data.Nat hiding (_>_)
+open import Data.Nat.Properties
 open import Data.Empty
 open import Data.Product hiding (,_)
 open import Data.Char
 open import Data.String as String
-open import Data.Sum
+open import Data.Sum as Sum
 open import Data.Sum.Categorical
 open import Data.List hiding ([_])
 open import Data.List.All
@@ -27,7 +28,7 @@ open import Relation.Binary.PropositionalEquality.Decidable
 open import Relation.Unary.Indexed
 open import Text.Parser.Types
 open import Text.Parser.Instruments
-open import Text.Parser.Position
+open import Text.Parser.Position as Position
 import Text.Parser.Success as S
 open import Text.Parser.Combinators hiding (_>>=_)
 open import Text.Parser.Char
@@ -36,15 +37,14 @@ open import Generic.AltSyntax
 
 open import Language
 open Surface
-
-private M = StateT Position (Position ⊎_)
+open import Types
 
 P : Parameters
 Parameters.Tok  P = Char
 Parameters.Toks P = Vec Char
 Parameters.Pos  P = Position
 Parameters.Ann  P = ⊥
-Parameters.M    P = StateT Position (Position ⊎_)
+Parameters.M    P = ParserM
 
 instance
 
@@ -53,21 +53,6 @@ instance
   recordToken    instrP = λ c p → inj₂ (_ , next c p)
   getPosition    instrP = λ p → inj₂ (p , p)
   getAnnotation  instrP = λ p → inj₂ (nothing , p)
-
-  monad-M : RawMonad M
-  monad-M = record
-    { return = λ a p → inj₂ (a , p)
-    ; _>>=_  = λ ma f p → [ inj₁ , uncurry f ]′ (ma p)
-    }
-
-  monad0-M : RawMonadZero M
-  monad0-M = record { monad = monad-M ; ∅ = inj₁ }
-
-  monad+-M : RawMonadPlus M
-  monad+-M = record
-    { monadZero = monad0-M
-    ; _∣_       = λ ma₁ ma₂ p → [ const (ma₂ p) , inj₂ ]′ (ma₁ p)
-    }
 
 type : [ Parser P (Type String) ]
 type = fix _ $ λ rec →
@@ -80,7 +65,7 @@ record Bidirectional (n : ℕ) : Set where
         check : Parser P (Parsed Check) n
 open Bidirectional
 
-module ST = RawMonadState (StateTMonadState Position (monadₗ Position Level.zero))
+module ST = RawMonadState (StateTMonadState Position Types.monad)
 
 prePosition : ∀ {A} → [ Parser P A ⟶ Parser P (Position × A) ]
 runParser (prePosition a) m≤n toks = let open ST in do
@@ -112,6 +97,6 @@ bidirectional = fix Bidirectional $ λ rec →
       check  = lam <|> emb
   in record { infer = infer ; check = check }
 
-parse : ∀ m → [ Parser P (Parsed m) ]
-parse Infer = infer bidirectional
-parse Check = check bidirectional
+parse : String → Result (Parsed Infer)
+parse str = Sum.map id (Success.value ∘ proj₁)
+          $′ runParser (infer bidirectional) ≤-refl (String.toVec str) start

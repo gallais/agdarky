@@ -1,9 +1,10 @@
 module Scopecheck where
 
-open import Data.Product
+open import Data.Product as Product
 open import Data.Nat
 open import Data.String as String
 open import Data.Maybe as Maybe
+open import Data.Sum
 open import Data.List
 open import Data.List.All using ([])
 open import Function
@@ -15,37 +16,31 @@ open import Category.Monad.State
 open import Generic.Syntax
 open import Generic.AltSyntax
 
+open import Text.Parser.Position
+
 open import Language
 open Surface
+open import Types
 
 -- Data.AVL is not quite usable with String at the moment IIRC
 -- So instead I'm using a quick and dirty representation
-module Map where
+import Data.Map as M
 
-  Map = String → Maybe ℕ
-
-  empty : Map
-  empty = const nothing
-
-  set : String → ℕ → Map → Map
-  set str n mp str′ with str String.≟ str′
-  ... | yes _ = just n
-  ... | no  _ = mp str′
+module Map = M.Map String._≟_ ℕ
+open Map using (Map; RMap)
 
 module _ where
 
-  open Map
-
-  M = State (Map × ℕ)
+  private M = State (Map × ℕ)
   open RawMonadState (StateMonadState (Map × ℕ))
 
   resolve : String → M ℕ
   resolve str = do
     (mp , gen) ← get
-    case mp str of λ where
+    case Map.assoc str mp of λ where
       (just n) → return n
       nothing  → do
-        put (set str gen mp , suc gen)
+        put (Map.set str gen mp , suc gen)
         return gen
 
   cleanupType : Type String → M (Type ℕ)
@@ -59,7 +54,8 @@ module _ where
   cleanupTerm (r >`λ b)    = r >`λ_  <$> cleanupTerm b
   cleanupTerm (r >`- t)    = r >`-_  <$> cleanupTerm t
 
-scopecheck : ∀ {m} → Parsed m → Maybe (Scoped m [])
-scopecheck r = let open RawMonad Maybe.monad in do
+scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
+scopecheck r = let temp = At start OutOfScope "placeholder" in -- waiting for a better one
+  maybe′ inj₂ (inj₁ temp) $ let open RawMonad Maybe.monad in do
   t ← ScopeCheck.scopeCheck eqdecMode _ [] [] r
-  return $ proj₁ $ cleanupTerm t (Map.empty , 0)
+  return $ map₂ (Map.invert ∘′ proj₁) $ cleanupTerm t (Map.empty , 0)

@@ -23,6 +23,7 @@ open import Text.Parser.Position
 open import Language
 open Surface
 open Internal
+open import Types
 
 Typing : List Mode → Set
 Typing = All (const (Type ℕ))
@@ -53,23 +54,10 @@ th^Var- v ρ δ = map₂ (map₂ $ unwind _ δ ρ) $ v (rewind _ δ ρ) where
   unwind (σ ∷ Γ) δ ρ z     = got (lookup ρ z) δ
   unwind (σ ∷ Γ) δ ρ (s v) = unwind Γ δ (select extend ρ) v
 
-data Error : Set where
-  At_Expected_Got_ : Position → Type ℕ → Type ℕ → Error
-  At_NotAnArrow_   : Position → Type ℕ → Error
-
-Result : Set → Set
-Result = Error ⊎_
-
-fromMaybe : ∀ {A} → Error → Maybe A → Result A
-fromMaybe = maybe′ inj₂ ∘ inj₁
-
 
 isArrow : (σ⇒τ : Type ℕ) → Maybe (Σ[ στ ∈ Type ℕ × Type ℕ ] σ⇒τ ≡ uncurry _⇒_ στ)
 isArrow (α _)   = nothing
 isArrow (σ ⇒ τ) = just ( _ , refl)
-
-monad : RawMonad Result
-monad = record { return = inj₂ ; _>>=_ = flip [ inj₁ ,_]′ }
 
 Type- : Mode → List Mode → Set
 Type- Infer Γ = ∀ γ   → Result (∃ λ σ → Typed (Infer , σ) (support Γ γ))
@@ -98,5 +86,10 @@ Sem.alg   Typecheck = λ where
     refl     ← fromMaybe (At r Expected σ Got τ) (decToMaybe $ eqdecType ℕ._≟_ τ σ)
     pure $ r >`- t′
 
-typecheck : Scoped Infer [] → Result (∃ λ σ → Typed (Infer , σ) [])
-typecheck t = Sem.closed Typecheck t []
+Type-_ed : Mode → Set
+Type- Infer ed = Result (∃ λ σ → Typed (Infer , σ) [])
+Type- Check ed = ∀ σ → Result (Typed (Check , σ) [])
+
+typecheck : ∀ m → Scoped m [] → Type- m ed
+typecheck Infer t = Sem.closed Typecheck t []
+typecheck Check t = Sem.closed Typecheck t []
