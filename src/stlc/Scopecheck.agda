@@ -55,7 +55,8 @@ module _ where
   cleanupTerm (r >`- t)    = r >`-_  <$> cleanupTerm t
 
 scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
-scopecheck r = let temp = At start OutOfScope "placeholder" in -- waiting for a better one
-  maybe′ inj₂ (inj₁ temp) $ let open RawMonad Maybe.monad in do
+scopecheck r = Types.fromMaybe (At start OutOfScope "placeholder")
+  $ let open RawMonad Maybe.monad in do
   t ← ScopeCheck.scopeCheck eqdecMode _ [] [] r
-  return $ map₂ (Map.invert ∘′ proj₁) $ cleanupTerm t (Map.empty , 0)
+  let t′ = cleanupTerm t (Map.empty , 0)
+  return $ map₂ (Map.invert ∘′ proj₁) t′
