@@ -31,7 +31,7 @@ open import Text.Parser.Instruments
 open import Text.Parser.Position as Position
 import Text.Parser.Success as S
 open import Text.Parser.Combinators hiding (_>>=_)
-open import Text.Parser.Char
+open import Text.Parser.Combinators.Char
 
 open import Generic.AltSyntax
 
@@ -49,10 +49,12 @@ Parameters.M    P = ParserM
 instance
 
   instrP : Instrumented P
-  withAnnotation instrP = λ _ ma → ma
-  recordToken    instrP = λ c p → inj₂ (_ , next c p)
-  getPosition    instrP = λ p → inj₂ (p , p)
-  getAnnotation  instrP = λ p → inj₂ (nothing , p)
+  instrP = record
+    { withAnnotation = λ ()
+    ; recordToken    = λ c p → inj₂ (_ , next c p)
+    ; getPosition    = λ p → inj₂ (p , p)
+    ; getAnnotation  = λ p → inj₂ (nothing , p)
+    }
 
 type : [ Parser P (Type String) ]
 type = fix _ $ λ rec →
@@ -66,17 +68,7 @@ record Bidirectional (n : ℕ) : Set where
 open Bidirectional
 
 module ST = RawMonadState (StateTMonadState Position Types.monad)
-
-prePosition : ∀ {A} → [ Parser P A ⟶ Parser P (Position × A) ]
-runParser (prePosition a) m≤n toks = let open ST in do
-  p ← get
-  S.map (p ,_) ST.<$> runParser a m≤n toks
-
-postPosition : ∀ {A} → [ Parser P A ⟶ Parser P (A × Position) ]
-runParser (postPosition a) m≤n toks = let open ST in do
-  a ← runParser a m≤n toks
-  p ← get
-  pure $ S.map (_, p) a
+module 𝕀 = Instrumented instrP
 
 bidirectional : [ Bidirectional ]
 bidirectional = fix Bidirectional $ λ rec →
@@ -85,15 +77,15 @@ bidirectional = fix Bidirectional $ λ rec →
       var    = `var <$> name
       cut    = (λ where ((c , p) , σ) → p > c `∶ σ)
               <$> ((char '(' &> □check)
-              <&> box (proj₂ <$> postPosition (char ':'))
+              <&> box (𝕀.getPosition <M& char ':')
               <&> box type)
               <&  box (char ')')
-      app    = _>_`$_ ∘ proj₂ <$> postPosition space
+      app    = _>_`$_ <$> (space &M> 𝕀.getPosition)
       infer  = hchainl (var <|> cut) (box app) □check
       lam    = (λ where ((p , x) , c) → p >`λ x ↦ c)
-              <$> ((char 'λ' &> box (prePosition (withSpaces name)))
+              <$> ((char 'λ' &> box (𝕀.getPosition <M&> withSpaces name))
               <&> box ((char '.') <&? box spaces &> □check))
-      emb    = (uncurry _>`-_) <$> (prePosition infer)
+      emb    = (uncurry _>`-_) <$> (𝕀.getPosition <M&> infer)
       check  = lam <|> emb
   in record { infer = infer ; check = check }
 
