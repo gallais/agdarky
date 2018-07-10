@@ -77,7 +77,7 @@ bidirectional = fix Bidirectional $ λ rec →
       var    = `var <$> name
       cut    = (λ where ((c , p) , σ) → p > c `∶ σ)
               <$> ((char '(' &> □check)
-              <&> box (𝕀.getPosition <M& char ':')
+              <&> box (𝕀.getPosition <M& withSpaces (char ':'))
               <&> box type)
               <&  box (char ')')
       app    = _>_`$_ <$> (space &M> 𝕀.getPosition)
