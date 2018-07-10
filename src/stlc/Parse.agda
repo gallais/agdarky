@@ -37,7 +37,7 @@ open import Generic.AltSyntax
 
 open import Language
 open Surface
-open import Types
+open import Types hiding (commit)
 
 P : Parameters
 Parameters.Tok  P = Char
@@ -51,10 +51,13 @@ instance
   instrP : Instrumented P
   instrP = record
     { withAnnotation = λ ()
-    ; recordToken    = λ c p → inj₂ (_ , next c p)
-    ; getPosition    = λ p → inj₂ (p , p)
-    ; getAnnotation  = λ p → inj₂ (nothing , p)
+    ; recordToken    = λ c p → value (_ , next c p)
+    ; getPosition    = λ p → value (p , p)
+    ; getAnnotation  = λ p → value (nothing , p)
     }
+
+commit : ∀ {A} → [ Parser P A ⟶ Parser P A ]
+runParser (commit p) m≤n s = Types.commit (runParser p m≤n s)
 
 type : [ Parser P (Type String) ]
 type = fix _ $ λ rec →
@@ -76,7 +79,7 @@ bidirectional = fix Bidirectional $ λ rec →
       name   = fromList⁺ <$> alphas⁺
       var    = `var <$> name
       cut    = (λ where ((c , p) , σ) → p > c `∶ σ)
-              <$> ((char '(' &> □check)
+              <$> ((char '(' &> INS.map commit □check)
               <&> box (𝕀.getPosition <M& withSpaces (char ':'))
               <&> box type)
               <&  box (char ')')
@@ -84,11 +87,15 @@ bidirectional = fix Bidirectional $ λ rec →
       infer  = hchainl (var <|> cut) (box app) □check
       lam    = (λ where ((p , x) , c) → p >`λ x ↦ c)
               <$> ((char 'λ' &> box (𝕀.getPosition <M&> withSpaces name))
-              <&> box ((char '.') <&? box spaces &> □check))
+              <&> box ((char '.') <&? box spaces &> INS.map commit □check))
       emb    = (uncurry _>`-_) <$> (𝕀.getPosition <M&> infer)
       check  = lam <|> emb
   in record { infer = infer ; check = check }
 
 parse : String → Result (Parsed Infer)
-parse str = Sum.map id (Success.value ∘ proj₁)
-          $′ runParser (infer bidirectional) ≤-refl (String.toVec str) start
+parse str = Success.value ∘′ proj₁
+  M.<$> runParser (infer bidirectional) ≤-refl (String.toVec str) start
+  where module M = RawMonad Types.monad
+
+_ : parse "(λ x . 1 : `a → `a)" ≡ hardFail At record { line = 0 ; offset = 8 } ParseError
+_ = refl

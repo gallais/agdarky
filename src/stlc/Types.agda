@@ -22,22 +22,27 @@ data Error : Set where
   At_Expected_Got_ : Position → Type ℕ → Type ℕ → Error
   At_NotAnArrow_   : Position → Type ℕ → Error
 
-Result : Set → Set
-Result = Error ⊎_
+data Result (A : Set) : Set where
+  hardFail : Error → Result A
+  softFail : Error → Result A
+  value    : A → Result A
 
 fail : ∀ {A} → Error → Result A
-fail = inj₁
+fail = softFail
 
 fromMaybe : ∀ {A} → Error → Maybe A → Result A
-fromMaybe = maybe′ inj₂ ∘′ fail
+fromMaybe = maybe′ value ∘′ softFail
 
 fromSum : ∀ {A B : Set} → (A → Error) → A ⊎ B → Result B
-fromSum f = [ fail ∘′ f , inj₂ ]′
+fromSum f = [ fail ∘′ f , value ]′
 
 monad : RawMonad Result
 monad = record
-  { return = inj₂
-  ; _>>=_  = [ const ∘ fail , _|>′_ ]
+  { return = value
+  ; _>>=_  = λ ra f → case ra of λ where
+    (hardFail e) → hardFail e
+    (softFail e) → softFail e
+    (value v)    → f v
   }
 
 --------------------------------------------------------------------------------
@@ -59,5 +64,12 @@ instance
   monad+-M : RawMonadPlus ParserM
   monad+-M = record
     { monadZero = monad0-M
-    ; _∣_       = λ ma₁ ma₂ p → [ const (ma₂ p) , inj₂ ]′ (ma₁ p)
+    ; _∣_       = λ ma₁ ma₂ s → case ma₁ s of λ where
+      (softFail _) → ma₂ s
+      r            → r
     }
+
+commit : ∀ {A} → ParserM A → ParserM A
+commit ma s = case ma s of λ where
+  (softFail e) → hardFail e
+  r            → r

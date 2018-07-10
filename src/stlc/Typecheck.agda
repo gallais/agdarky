@@ -66,10 +66,10 @@ open RawMonad monad hiding (return)
 Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck {m} = th^Var- {m}
 Sem.var   Typecheck {m} = case m return (λ m → Var- m _ → Type- m _) of λ where
-  Infer v γ → inj₂ (Product.map₂ `var (proj₂ $ v γ))
+  Infer v γ → pure (Product.map₂ `var (proj₂ $ v γ))
   Check v γ → case (proj₁ $ v γ) of λ ()
 Sem.alg   Typecheck = λ where
-  (r > t `∶' σ) γ     → Sum.map id (,_ ∘ (r >_`∶ σ)) (t γ σ)
+  (r > t `∶' σ) γ     → (,_ ∘ (r >_`∶ σ)) <$> t γ σ
   (r > f `$' t) γ     → do
     (σ⇒τ , f′)       ← f γ
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
