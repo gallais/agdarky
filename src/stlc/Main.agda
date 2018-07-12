@@ -12,7 +12,7 @@ open import Typecheck
 open import Print
 
 open import Category.Monad
-open RawMonad monad
+open RawMonad Result.monad
 
 pipeline : String → Result String
 pipeline str = do

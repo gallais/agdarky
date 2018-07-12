@@ -61,7 +61,7 @@ Type- : Mode → List Mode → Set
 Type- Infer Γ = ∀ γ   → Result (∃ λ σ → Typed (Infer , σ) (support Γ γ))
 Type- Check Γ = ∀ γ σ → Result (Typed (Check , σ) (support Γ γ))
 
-open RawMonad monad hiding (return)
+open RawMonad Result.monad hiding (return)
 
 Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck {m} = th^Var- {m}

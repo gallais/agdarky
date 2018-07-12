@@ -27,37 +27,26 @@ open import Data.Subset
 open import Relation.Binary.PropositionalEquality.Decidable
 open import Relation.Unary.Indexed
 open import Text.Parser.Types
-open import Text.Parser.Instruments
 open import Text.Parser.Position as Position
-import Text.Parser.Success as S
 open import Text.Parser.Combinators hiding (_>>=_)
 open import Text.Parser.Combinators.Char
+open import Text.Parser.Monad
 
 open import Generic.AltSyntax
 
 open import Language
 open Surface
-open import Types hiding (commit)
+open import Types
 
-P : Parameters
-Parameters.Tok  P = Char
-Parameters.Toks P = Vec Char
-Parameters.Pos  P = Position
-Parameters.Ann  P = ⊥
-Parameters.M    P = ParserM
+module ParserM = Agdarsec Error ⊥ (record { into = At_ParseError ∘′ proj₁ })
+open ParserM
 
 instance
+  _ = ParserM.monadZero
+  _ = ParserM.monadPlus
+  _ = ParserM.monad
 
-  instrP : Instrumented P
-  instrP = record
-    { withAnnotation = λ ()
-    ; recordToken    = λ c p → value (_ , next c p)
-    ; getPosition    = λ p → value (p , p)
-    ; getAnnotation  = λ p → value (nothing , p)
-    }
-
-commit : ∀ {A} → [ Parser P A ⟶ Parser P A ]
-runParser (commit p) m≤n s = Types.commit (runParser p m≤n s)
+P = ParserM.chars
 
 type : [ Parser P (Type String) ]
 type = fix _ $ λ rec →
@@ -70,9 +59,6 @@ record Bidirectional (n : ℕ) : Set where
         check : Parser P (Parsed Check) n
 open Bidirectional
 
-module ST = RawMonadState (StateTMonadState Position Types.monad)
-module 𝕀 = Instrumented instrP
-
 bidirectional : [ Bidirectional ]
 bidirectional = fix Bidirectional $ λ rec →
   let □check = INS.map check rec
@@ -80,22 +66,22 @@ bidirectional = fix Bidirectional $ λ rec →
       var    = `var <$> name
       cut    = (λ where ((c , p) , σ) → p > c `∶ σ)
               <$> ((char '(' &> INS.map commit □check)
-              <&> box (𝕀.getPosition <M& withSpaces (char ':'))
+              <&> box (getPosition <M& withSpaces (char ':'))
               <&> box type)
               <&  box (char ')')
-      app    = _>_`$_ <$> (space &M> 𝕀.getPosition)
+      app    = _>_`$_ <$> (space &M> getPosition)
       infer  = hchainl (var <|> cut) (box app) □check
       lam    = (λ where ((p , x) , c) → p >`λ x ↦ c)
-              <$> ((char 'λ' &> box (𝕀.getPosition <M&> withSpaces name))
+              <$> ((char 'λ' &> box (getPosition <M&> withSpaces name))
               <&> box ((char '.') <&? box spaces &> INS.map commit □check))
-      emb    = (uncurry _>`-_) <$> (𝕀.getPosition <M&> infer)
+      emb    = (uncurry _>`-_) <$> (getPosition <M&> infer)
       check  = lam <|> emb
   in record { infer = infer ; check = check }
 
-parse : String → Result (Parsed Infer)
-parse str = Success.value ∘′ proj₁
-  M.<$> runParser (infer bidirectional) ≤-refl (String.toVec str) start
-  where module M = RawMonad Types.monad
+parse : String → Types.Result (Parsed Infer)
+parse str = result inj₁ inj₁ (inj₂ ∘′ Success.value ∘′ proj₁)
+   $′ runParser (infer bidirectional) ≤-refl (String.toVec str) (start , [])
+   where module M = RawMonad ParserM.monad
 
-_ : parse "(λ x . 1 : `a → `a)" ≡ hardFail At record { line = 0 ; offset = 8 } ParseError
+_ : parse "(λ x . 1 : `a → `a)" ≡ inj₁ (At record { line = 0 ; offset = 8 } ParseError)
 _ = refl
