@@ -5,12 +5,11 @@ import Data.Nat.Show as NShow
 open import Data.String
 open import Data.Product
 open import Data.Maybe
-open import Data.List using ([])
+open import Data.List.Base using ([])
 open import Function
 
 open import var
 open import environment
-open import Generic.Syntax
 import Generic.Semantics.Printing as Printing
 
 open import Language

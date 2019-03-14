@@ -1,12 +1,14 @@
 module Typecheck where
 
 open import Data.Product as Product
-open import Data.Nat as ℕ hiding (_>_)
+open import Data.Nat as ℕ using (ℕ; _≟_)
 open import Data.List hiding (lookup ; fromMaybe)
-open import Data.List.Relation.Unary.All hiding (lookup)
+open import Data.List.Relation.Unary.All as All hiding (lookup)
+open import Data.List.Relation.Unary.Any
+open import Data.List.Membership.Propositional
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Data.Maybe hiding (fromMaybe)
 open import Function
-open import Relation.Binary.PropositionalEquality
 
 open import Category.Monad
 
@@ -22,51 +24,68 @@ open Surface
 open Internal
 open import Types
 
+private
+  variable
+    σ : Type ℕ
+    m : Mode
+    ms ns : List Mode
+
 Typing : List Mode → Set
 Typing = All (const (Type ℕ))
 
-support : ∀ Γ → Typing Γ → List (Mode × Type ℕ)
-support []       []       = []
-support (m ∷ ms) (σ ∷ σs) = (m , σ) ∷ support ms σs
+fromTyping : ∀ ms → Typing ms → List (Mode × Type ℕ)
+fromTyping []       []       = []
+fromTyping (m ∷ ms) (σ ∷ σs) = (m , σ) ∷ fromTyping ms σs
 
-Var- : Mode → List Mode → Set
-Var- m Γ = ∀ γ → m ≡ Infer × ∃ λ σ → Var (m , σ) (support Γ γ)
+Elab : (Mode × Type ℕ) ─Scoped → Mode × Type ℕ → (ms : List Mode) → Typing ms → Set
+Elab T σ ms Γ = T σ (fromTyping ms Γ)
 
-var0 : ∀ {Γ} → Var- Infer (Infer ∷ Γ)
-var0 (σ ∷ _) = refl , σ , z
+data Var- : Mode ─Scoped where
+  `var : (infer : ∀ Γ → Σ[ σ ∈ Type ℕ ] Elab Var (Infer , σ) ms Γ) →
+         Var- Infer ms
 
-th^Var- : ∀ {m} → Thinnable (Var- m)
-th^Var- v ρ δ = map₂ (map₂ $ unwind _ δ ρ) $ v (rewind _ δ ρ) where
+var0 : Var- Infer (Infer ∷ ms)
+var0 = `var (λ where (σ ∷ _) → σ , z)
 
-  rewind : ∀ Γ {Δ} → Typing Δ → Thinning Γ Δ → Typing Γ
-  rewind []      δ ρ = []
-  rewind (σ ∷ Γ) δ ρ = get (lookup ρ z) δ ∷ rewind Γ δ (select extend ρ)
+toVar : m ∈ ms → Var m ms
+toVar (here refl) = z
+toVar (there v) = s (toVar v)
 
-  got : ∀ {Δ m} (k : Var m Δ) (γ : Typing Δ) → Var (m , get k γ) (support Δ γ)
-  got z     (σ ∷ _) = z
-  got (s k) (_ ∷ γ) = s (got k γ)
+fromVar : Var m ms → m ∈ ms
+fromVar z = here refl
+fromVar (s v) = there (fromVar v)
 
-  unwind : ∀ Γ {Δ σ} δ ρ → Var σ (support Γ (rewind Γ δ ρ)) → Var σ (support Δ δ)
-  unwind []      δ ρ ()
-  unwind (σ ∷ Γ) δ ρ z     = got (lookup ρ z) δ
-  unwind (σ ∷ Γ) δ ρ (s v) = unwind Γ δ (select extend ρ) v
+coth^Typing : Typing ns → Thinning ms ns → Typing ms
+coth^Typing Δ ρ = All.tabulate (λ x∈Γ → All.lookup Δ (fromVar (lookup ρ (toVar x∈Γ))))
 
+lookup-fromVar : ∀ Δ (v : Var m ms) → Var (m , All.lookup Δ (fromVar v)) (fromTyping ms Δ)
+lookup-fromVar (_ ∷ _) z     = z
+lookup-fromVar (_ ∷ _) (s v) = s (lookup-fromVar _ v)
+
+erase^coth : ∀ ms Δ (ρ : Thinning ms ns) →
+             Var (m , σ) (fromTyping ms (coth^Typing Δ ρ)) → Var (m , σ) (fromTyping ns Δ)
+erase^coth []       Δ ρ ()
+erase^coth (m ∷ ms) Δ ρ z     = lookup-fromVar Δ (lookup ρ z)
+erase^coth (m ∷ ms) Δ ρ (s v) = erase^coth ms Δ (select extend ρ) v
+
+th^Var- : Thinnable (Var- m)
+th^Var- (`var infer) ρ = `var λ Δ →
+  let (σ , v) = infer (coth^Typing Δ ρ) in
+  σ , erase^coth _ Δ ρ v
 
 isArrow : (σ⇒τ : Type ℕ) → Maybe (Σ[ στ ∈ Type ℕ × Type ℕ ] σ⇒τ ≡ uncurry _⇒_ στ)
 isArrow (α _) = nothing
 isArrow (σ ⇒ τ) = just ( _ , refl)
 
 Type- : Mode → List Mode → Set
-Type- Infer Γ = ∀ γ   → Result (∃ λ σ → Typed (Infer , σ) (support Γ γ))
-Type- Check Γ = ∀ γ σ → Result (Typed (Check , σ) (support Γ γ))
+Type- Infer Γ = ∀ γ   → Result (∃ λ σ → Typed (Infer , σ) (fromTyping Γ γ))
+Type- Check Γ = ∀ γ σ → Result (Typed (Check , σ) (fromTyping Γ γ))
 
 open RawMonad Result.monad hiding (return)
 
 Typecheck : Sem (surface ℕ) Var- Type-
-Sem.th^𝓥 Typecheck {m} = th^Var- {m}
-Sem.var   Typecheck {m} = case m return (λ m → Var- m _ → Type- m _) of λ where
-  Infer v γ → pure (Product.map₂ `var (proj₂ $ v γ))
-  Check v γ → case (proj₁ $ v γ) of λ ()
+Sem.th^𝓥 Typecheck = th^Var-
+Sem.var   Typecheck = λ where (`var infer) γ → pure (map₂ `var (infer γ))
 Sem.alg   Typecheck = λ where
   (r > t `∶' σ) γ     → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
   (r > f `$' t) γ     → do
