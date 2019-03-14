@@ -28,7 +28,8 @@ print : ∀ {mσ} → Typed mσ [] → Map → String
 print t mp = Printing.print display t where
 
   display = Printing.mkD $ λ where
-    (p , t `∶' σ)      → "(" ++ t ++ " : " ++ type σ mp ++ ")"
-    (p , f `$' t)      → f ++ " " ++ t
-    (p , `λ' (x , b))  → "λ" ++ lookup x z ++ "." ++ b
-    (p , `-' t)        → t
+    (p , t `∶' σ)             → "(" ++ t ++ " : " ++ type σ mp ++ ")"
+    (p , f `$' t)             → f ++ " " ++ t
+    (p , `λ' (x , b))         → "λ" ++ lookup x z ++ "." ++ b
+    (p , `let' e `in (x , b)) → "let " ++ lookup x z ++ " = " ++ e ++ " in " ++ b
+    (p , `-' t)               → t

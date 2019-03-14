@@ -93,11 +93,15 @@ Sem.alg   Typecheck = λ where
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     t′               ← t γ σ
     pure $ -, r > f′ `$ t′
-  (r >`λ' b)    γ σ⇒τ → do
+  (r >`λ' b) γ σ⇒τ → do
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     b′               ← b extend (ε ∙ var0) (σ ∷ γ) τ
     pure $ r >`λ b′
-  (r >`-' t)    γ σ   → do
+  (r >`let' e `in b) γ τ → do
+    (σ , e′) ← e γ
+    b′       ← b extend (ε ∙ var0) (σ ∷ γ) τ
+    pure $ r >`let e′ `in b′
+  (r >`-' t) γ σ   → do
     (τ , t′) ← t γ
     refl     ← fromMaybe (At r Expected σ Got τ) (decToMaybe $ eqdecType ℕ._≟_ τ σ)
     pure $ r >`- t′

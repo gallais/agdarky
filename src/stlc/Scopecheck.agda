@@ -48,11 +48,12 @@ module _ where
   cleanupType (σ ⇒ τ) = _⇒_ <$> cleanupType σ ⊛ cleanupType τ
 
   cleanupTerm : ∀ {i σ Γ} → Tm (surface String) i σ Γ → M (Scoped σ Γ)
-  cleanupTerm (`var k)     = return $ `var k
-  cleanupTerm (r > t `∶ σ) = r >_`∶_ <$> cleanupTerm t ⊛ cleanupType σ
-  cleanupTerm (r > f `$ t) = r >_`$_ <$> cleanupTerm f ⊛ cleanupTerm t
-  cleanupTerm (r >`λ b)    = r >`λ_  <$> cleanupTerm b
-  cleanupTerm (r >`- t)    = r >`-_  <$> cleanupTerm t
+  cleanupTerm (`var k)          = return $ `var k
+  cleanupTerm (r > t `∶ σ)      = r >_`∶_ <$> cleanupTerm t ⊛ cleanupType σ
+  cleanupTerm (r > f `$ t)      = r >_`$_ <$> cleanupTerm f ⊛ cleanupTerm t
+  cleanupTerm (r >`λ b)         = r >`λ_  <$> cleanupTerm b
+  cleanupTerm (r >`let e `in b) = r >`let_`in_ <$> cleanupTerm e ⊛ cleanupTerm b
+  cleanupTerm (r >`- t)         = r >`-_  <$> cleanupTerm t
 
 scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
 scopecheck r = Types.fromMaybe (At start OutOfScope "placeholder")

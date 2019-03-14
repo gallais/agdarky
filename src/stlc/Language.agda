@@ -49,7 +49,7 @@ module _ {A : Set} where
  eqdecType eq (_ ⇒ _)   (α _)     = no (λ ())
 
 data `Bidi : Set where
-  Cut App Lam Emb : `Bidi
+  Cut App Lam Let Emb : `Bidi
 
 -- Throwing in some useful combinators
 
@@ -71,6 +71,7 @@ module Surface where
     Cut → `κ Type A `× `X [] Check (`∎ Infer)
     App → `κ ⊤      `× `X [] Infer (`X [] Check (`∎ Infer))
     Lam → `κ ⊤      `× `X (Infer ∷ []) Check (`∎ Check)
+    Let → `κ ⊤      `× `X [] Infer (`X (Infer ∷ []) Check (`∎ Check))
     Emb → `κ ⊤      `× `X [] Infer (`∎ Check)
 
   Parsed : Mode → Set
@@ -90,6 +91,8 @@ module Internal where
           `X [] (Infer , σ ⇒ τ) (`X [] (Check , σ) (`∎ (Infer , τ)))
     Lam → `σ (Type ℕ × Type ℕ) $ uncurry $ λ σ τ →
           `X ((Infer , σ) ∷ []) (Check , τ) (`∎ (Check , σ ⇒ τ))
+    Let → `σ (Type ℕ × Type ℕ) $ uncurry $ λ σ τ →
+          `X [] (Infer , σ) (`X ((Infer , σ) ∷ []) (Check , τ) (`∎ (Check , τ)))
     Emb → `σ (Type ℕ)          $ λ σ →
           `X [] (Infer , σ) (`∎ (Check , σ))
 
@@ -98,26 +101,30 @@ module Internal where
 
 
 -- Traditional pattern synonyms (usable on the LHS only)
-pattern _`∶'_ t σ = (Cut , σ , t , refl)
-pattern _`∶_  t σ = `con (_ , t `∶' σ)
-pattern _`$'_ f t = (App , _ , f , t , refl)
-pattern _`$_  f t = `con (_ , f `$' t)
-pattern `λ'_  b   = (Lam , _ , b , refl)
-pattern `λ_   b   = `con (_ , `λ' b)
-pattern `-'   t   = (Emb , _ , t , refl)
-pattern `-    t   = `con (_ , `-' t)
+pattern _`∶'_      t σ = (Cut , σ , t , refl)
+pattern _`∶_       t σ = `con (_ , t `∶' σ)
+pattern _`$'_      f t = (App , _ , f , t , refl)
+pattern _`$_       f t = `con (_ , f `$' t)
+pattern `λ'_       b   = (Lam , _ , b , refl)
+pattern `λ_        b   = `con (_ , `λ' b)
+pattern `let'_`in_ e b = (Let , _ , e , b , refl)
+pattern `let_`in_  e b = `con (_ , `let' e `in b)
+pattern `-'        t   = (Emb , _ , t , refl)
+pattern `-         t   = `con (_ , `-' t)
 
 -- Position-aware pattern synonyms (usable both on the LHS and RHS)
-pattern _>_`∶'_  r t σ = (r , Cut , σ , t , refl)
-pattern _>_`∶_   r t σ = `con (r > t `∶' σ)
-pattern _>_`$'_  r f t = (r , App , _ , f , t , refl)
-pattern _>_`$_   r f t = `con (r > f `$' t)
-pattern _>`λ'_   r b   = (r , Lam , _ , b , refl)
-pattern _>`λ_    r b   = `con (r >`λ' b)
-pattern _>`λ'_↦_ r x b = (r , Lam , _ , (x ∷ [] , b) , refl)
-pattern _>`λ_↦_  r x b = `con (r >`λ' x ↦ b)
-pattern _>`-'_   r t   = (r , Emb , _ , t , refl)
-pattern _>`-_    r t   = `con (r >`-' t)
+pattern _>_`∶'_      r t σ = (r , Cut , σ , t , refl)
+pattern _>_`∶_       r t σ = `con (r > t `∶' σ)
+pattern _>_`$'_      r f t = (r , App , _ , f , t , refl)
+pattern _>_`$_       r f t = `con (r > f `$' t)
+pattern _>`λ'_       r b   = (r , Lam , _ , b , refl)
+pattern _>`λ_        r b   = `con (r >`λ' b)
+pattern _>`λ'_↦_     r x b = (r , Lam , _ , (x ∷ [] , b) , refl)
+pattern _>`λ_↦_      r x b = `con (r >`λ' x ↦ b)
+pattern _>`let'_`in_ r e b = (r , Let , _ , e , b , refl)
+pattern _>`let_`in_  r e b = `con (r >`let' e `in b)
+pattern _>`-'_       r t   = (r , Emb , _ , t , refl)
+pattern _>`-_        r t   = `con (r >`-' t)
 
 
 -- Examples of terms of differnent languages using the same pattern synonyms
