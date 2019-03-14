@@ -2,10 +2,9 @@ module Typecheck where
 
 open import Data.Product as Product
 open import Data.Nat as ℕ hiding (_>_)
-open import Data.Sum as Sum
 open import Data.List hiding (lookup ; fromMaybe)
-open import Data.List.All hiding (lookup)
-open import Data.Maybe hiding (All ; monad)
+open import Data.List.Relation.Unary.All hiding (lookup)
+open import Data.Maybe hiding (fromMaybe)
 open import Function
 open import Relation.Binary.PropositionalEquality
 
@@ -69,12 +68,12 @@ Sem.var   Typecheck {m} = case m return (λ m → Var- m _ → Type- m _) of λ 
   Infer v γ → pure (Product.map₂ `var (proj₂ $ v γ))
   Check v γ → case (proj₁ $ v γ) of λ ()
 Sem.alg   Typecheck = λ where
-  (r > t `∶' σ) γ     → (,_ ∘ (r >_`∶ σ)) <$> t γ σ
+  (r > t `∶' σ) γ     → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
   (r > f `$' t) γ     → do
     (σ⇒τ , f′)       ← f γ
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     t′               ← t γ σ
-    pure $ , r > f′ `$ t′
+    pure $ -, r > f′ `$ t′
   (r >`λ' b)    γ σ⇒τ → do
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     b′               ← b extend (ε ∙ var0) (σ ∷ γ) τ

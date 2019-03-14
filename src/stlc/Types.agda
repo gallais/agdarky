@@ -10,7 +10,7 @@ open import Function
 open import Category.Functor
 open import Category.Applicative
 open import Category.Monad
-open import Category.Monad.Identity
+import Function.Identity.Categorical as Id
 
 open import Text.Parser.Position
 
@@ -55,7 +55,7 @@ module Sumₗ {a} (A : Set a) (b : Level) where
     } where module M = RawMonad M
 
   monad : RawMonad Sumₗ
-  monad = monadT IdentityMonad
+  monad = monadT Id.monad
 
 module Result where
 

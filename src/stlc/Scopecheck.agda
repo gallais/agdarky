@@ -2,10 +2,12 @@ module Scopecheck where
 
 open import Data.Product as Product
 open import Data.Nat
-open import Data.String as String
-open import Data.Maybe as Maybe
+open import Data.String
+open import Data.String.Unsafe as String
+open import Data.Maybe.Base using (nothing; just)
+open import Data.Maybe.Categorical as Maybe
 open import Data.List using ([])
-open import Data.List.All using ([])
+open import Data.List.Relation.Unary.All using ([])
 open import Function
 
 open import Category.Monad

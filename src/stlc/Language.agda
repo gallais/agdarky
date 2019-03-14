@@ -1,7 +1,7 @@
 module Language where
 
 open import Data.Unit
-open import Data.Product hiding (,_)
+open import Data.Product
 open import Data.Nat
 open import Data.List as List
 open import Data.List.All -- important for the pattern synonyms!
