@@ -135,10 +135,11 @@ bidirectional = fix Bidirectional $ λ rec →
                <$> (theTok LPAR
                 &> □check <&> box (theTok COL) <&> box (commit type)
                <& box (theTok RPAR))
-      app    = INS.map (λ p → (λ where (p , c) e  → p > e `$ c)
-                              <$> (getPosition <M&> p))
-                      □check
-      infer  = iterate (var <|> cut) app
+      app    = (λ where (p , c) e → p > e `$ c) <$>
+                (getPosition <M&> ((uncurry _>`-_ <$> (getPosition <M&> var))
+                              <|> parens □check))
+      infer  = iterate (var <|> cut <|> parens (INS.map commit □infer))
+                       (box app)
       lam    = (λ where ((p , x) , c) → p >`λ x ↦ c)
                <$> (theTok LAM &> box (getPosition <M&> name)
                <&> box (theTok DOT &> INS.map commit □check))
@@ -195,15 +196,13 @@ _ : tokenize (String.toList "(λ x . x : `a → `a)")
 _ = refl
 
 _ : parse "(λ x . x : `a → `a)"
-    ≡ inj₂ (_ > _ >`λ "x" ↦ (_ >`- `var "x") `∶ (α "`a" ⇒ α "`a"))
+    ≡ inj₂ (_ > _ >`λ "x" ↦ (_ >`- `var "x") `∶ (α "a" ⇒ α "a"))
 _ = refl
 
-{-
 _ : parse "(let x = (λf.f : `a → `a) in x : `a → `a)"
     ≡ inj₂ (_ >
       _ >`let "x" ↦ _ > _ >`λ "f" ↦ (_ >`- (`var "f"))
-                     `∶ (α "`a" ⇒ α "`a")
+                     `∶ (α "a" ⇒ α "a")
          `in (_ >`- `var "x") `∶ ?)
 _ = refl
--}
 -}

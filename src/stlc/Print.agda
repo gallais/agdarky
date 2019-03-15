@@ -1,11 +1,13 @@
 module Print where
 
+open import Data.Bool using (if_then_else_)
 open import Data.Nat as Nat
 import Data.Nat.Show as NShow
 open import Data.String
+open import Data.Char
 open import Data.Product
 open import Data.Maybe
-open import Data.List.Base using ([])
+open import Data.List.Base as List using ([])
 open import Function
 
 open import var
@@ -29,7 +31,9 @@ print t mp = Printing.print display t where
 
   display = Printing.mkD $ λ where
     (p , t `∶' σ)             → "(" ++ t ++ " : " ++ type σ mp ++ ")"
-    (p , f `$' t)             → f ++ " " ++ t
+    (p , f `$' t)             → if List.any isSpace (toList t)
+                                then f ++ " (" ++ t ++ ")"
+                                else f ++ " " ++ t
     (p , `λ' (x , b))         → "λ" ++ lookup x z ++ "." ++ b
     (p , `let' e `in (x , b)) → "let " ++ lookup x z ++ " = " ++ e ++ " in " ++ b
     (p , `-' t)               → t

@@ -36,3 +36,7 @@ _ = refl
 _ : pipeline "(λf.λx. f (let y = x in y) x : (`a → `a → `b) → `a → `b)"
   ≡ inj₂ "(λa.λb.a b b : (`a → `a → `b) → `a → `b)"
 _ = refl
+
+_ : pipeline "(λg.λf.λa. let b = f a in g a b : (`a → `b → `c) → (`a → `b) → `a → `c)"
+  ≡ inj₂ "(λa.λb.λc.a c (b c) : (`a → `b → `c) → (`a → `b) → `a → `c)"
+_ = refl
