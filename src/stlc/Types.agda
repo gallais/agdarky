@@ -1,16 +1,11 @@
 module Types where
 
 open import Level
-open import Data.String
-open import Data.Nat using (ℕ)
-open import Data.Maybe using (Maybe ; maybe′)
-open import Data.Sum as Sum
+open import Data.String.Base
+open import Data.Nat.Base using (ℕ)
+open import Data.Maybe.Base using (Maybe ; maybe′)
+open import Data.Sum.Base as Sum
 open import Function
-
-open import Category.Functor
-open import Category.Applicative
-open import Category.Monad
-import Function.Identity.Categorical as Id
 
 open import Text.Parser.Position
 
@@ -34,29 +29,6 @@ fail = inj₁
 fromMaybe : ∀ {A} → Error → Maybe A → Result A
 fromMaybe = maybe′ inj₂ ∘′ fail
 
-module Sumₗ {a} (A : Set a) (b : Level) where
-
-  Sumₗ : Set (a ⊔ b) → Set (a ⊔ b)
-  Sumₗ B = A ⊎ B
-
-  functor : RawFunctor Sumₗ
-  functor = record { _<$>_ = map id }
-
-  applicative : RawApplicative Sumₗ
-  applicative = record
-    { pure = inj₂
-    ; _⊛_ = [ const ∘ inj₁ , map id ]′
-    }
-
-  monadT : ∀ {M} → RawMonad M → RawMonad (M ∘′ Sumₗ)
-  monadT M = record
-    { return = M.pure ∘ inj₂
-    ; _>>=_  = λ ma f → ma M.>>= [ M.pure ∘′ inj₁ , f ]′
-    } where module M = RawMonad M
-
-  monad : RawMonad Sumₗ
-  monad = monadT Id.monad
-
 module Result where
 
-  open Sumₗ Error zero public
+  open import Data.Sum.Categorical.Left Error zero public
