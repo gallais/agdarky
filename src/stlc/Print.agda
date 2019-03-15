@@ -24,7 +24,7 @@ type (α k)         mp = maybe ("`" ++_) (NShow.show k) (Map.assoc k mp)
 type (σ@(α _) ⇒ τ) mp = type σ mp ++ " → " ++ type τ mp
 type (σ       ⇒ τ) mp = "(" ++ type σ mp ++ ") → " ++ type τ mp
 
-print : ∀ {mσ} → Typed mσ [] → Map → String
+print : ∀ {P mσ} → Internal P mσ [] → Map → String
 print t mp = Printing.print display t where
 
   display = Printing.mkD $ λ where

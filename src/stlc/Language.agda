@@ -1,10 +1,11 @@
 module Language where
 
 open import Data.Unit
+open import Data.Empty
 open import Data.Product
 open import Data.Nat
 open import Data.List as List
-open import Data.List.All -- important for the pattern synonyms!
+open import Data.List.Relation.Unary.All -- important for the pattern synonyms!
 open import Data.String as String
 open import Function
 open import Function.Equivalence
@@ -14,7 +15,7 @@ open import Relation.Nullary.Product
 open import Relation.Binary using (Decidable)
 open import Relation.Binary.PropositionalEquality
 
-open import var using (z ; s)
+open import var using (z; s; _─Scoped)
 open import Generic.Syntax
 open import Generic.AltSyntax
 open import Text.Parser.Position
@@ -48,8 +49,9 @@ module _ {A : Set} where
  eqdecType eq (α _)     (_ ⇒ _)   = no (λ ())
  eqdecType eq (_ ⇒ _)   (α _)     = no (λ ())
 
-data `Bidi : Set where
-  Cut App Lam Let Emb : `Bidi
+data `Bidi (P : Set) : Set where
+  Cut App Lam Emb : `Bidi P
+  Let : {p : P} → `Bidi P
 
 -- Throwing in some useful combinators
 
@@ -67,7 +69,7 @@ module Surface where
 -- same between surface and internal. This will allow us to
 -- use the same pattern synonyms for both!
   surface : Set → Desc Mode
-  surface A = Located $ `σ `Bidi $ λ where
+  surface A = Located $ `σ (`Bidi ⊤) $ λ where
     Cut → `κ Type A `× `X [] Check (`∎ Infer)
     App → `κ ⊤      `× `X [] Infer (`X [] Check (`∎ Infer))
     Lam → `κ ⊤      `× `X (Infer ∷ []) Check (`∎ Check)
@@ -83,8 +85,8 @@ module Surface where
 
 module Internal where
 
-  internal : Desc (Mode × Type ℕ)
-  internal = Located $ `σ `Bidi $ λ where
+  internal : (P : Set) → Desc (Mode × Type ℕ)
+  internal P = Located $ `σ (`Bidi P) $ λ where
     Cut → `σ (Type ℕ)          $ λ σ →
           `X [] (Check , σ) (`∎ (Infer , σ))
     App → `σ (Type ℕ × Type ℕ) $ uncurry $ λ σ τ →
@@ -96,9 +98,35 @@ module Internal where
     Emb → `σ (Type ℕ)          $ λ σ →
           `X [] (Infer , σ) (`∎ (Check , σ))
 
-  Typed : (Mode × Type ℕ) → List (Mode × Type ℕ) → Set
-  Typed = Tm internal _
+  Internal : (P : Set) → (Mode × Type ℕ) ─Scoped
+  Internal P = Tm (internal P) _
 
+  typed = internal ⊤
+
+  Typed : (Mode × Type ℕ) ─Scoped
+  Typed = Tm typed _
+
+  letfree = internal ⊥
+
+  LetFree : (Mode × Type ℕ) ─Scoped
+  LetFree = Tm letfree _
+
+  erase : ∀ {X σ Γ} → ⟦ letfree ⟧ X σ Γ → ⟦ typed ⟧ X σ Γ
+  erase (r , Cut , p) = r , Cut , p
+  erase (r , App , p) = r , App , p
+  erase (r , Lam , p) = r , Lam , p
+  erase (r , Emb , p) = r , Emb , p
+
+  data LetView {X Γ} : ∀ {σ} → ⟦ typed ⟧ X σ Γ → Set where
+    Let  : ∀ r {σ τ} e b → LetView (r , Let , (σ , τ) , e , b , refl)
+    ¬Let : ∀ {σ} (t : ⟦ letfree ⟧ X σ Γ) → LetView (erase t)
+
+  letView : ∀ {X Γ σ} (t : ⟦ typed ⟧ X σ Γ) → LetView t
+  letView (r , Cut , p)                = ¬Let (r , Cut , p)
+  letView (r , App , p)                = ¬Let (r , App , p)
+  letView (r , Lam , p)                = ¬Let (r , Lam , p)
+  letView (r , Emb , p)                = ¬Let (r , Emb , p)
+  letView (r , Let , _ , e , b , refl) = Let r e b
 
 -- Traditional pattern synonyms (usable on the LHS only)
 pattern _`∶'_      t σ = (Cut , σ , t , refl)
