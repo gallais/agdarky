@@ -116,6 +116,7 @@ module Internal where
   erase (r , App , p) = r , App , p
   erase (r , Lam , p) = r , Lam , p
   erase (r , Emb , p) = r , Emb , p
+  erase (r , Let {} , p)
 
   data LetView {X Γ} : ∀ {σ} → ⟦ typed ⟧ X σ Γ → Set where
     Let  : ∀ r {σ τ} e b → LetView (r , Let , (σ , τ) , e , b , refl)

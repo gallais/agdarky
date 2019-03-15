@@ -4,7 +4,7 @@ open import Data.Product as Product
 open import Data.Nat as ℕ using (ℕ; _≟_)
 open import Data.List hiding (lookup ; fromMaybe)
 open import Data.List.Relation.Unary.All as All hiding (lookup)
-open import Data.List.Relation.Unary.Any
+open import Data.List.Relation.Unary.Any using (here; there)
 open import Data.List.Membership.Propositional
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Data.Maybe hiding (fromMaybe)
@@ -24,12 +24,6 @@ open Surface
 open Internal
 open import Types
 
-private
-  variable
-    σ : Type ℕ
-    m : Mode
-    ms ns : List Mode
-
 Typing : List Mode → Set
 Typing = All (const (Type ℕ))
 
@@ -41,34 +35,35 @@ Elab : (Mode × Type ℕ) ─Scoped → Mode × Type ℕ → (ms : List Mode) �
 Elab T σ ms Γ = T σ (fromTyping ms Γ)
 
 data Var- : Mode ─Scoped where
-  `var : (infer : ∀ Γ → Σ[ σ ∈ Type ℕ ] Elab Var (Infer , σ) ms Γ) →
+  `var : ∀ {ms} → (infer : ∀ Γ → Σ[ σ ∈ Type ℕ ] Elab Var (Infer , σ) ms Γ) →
          Var- Infer ms
 
-var0 : Var- Infer (Infer ∷ ms)
+var0 : ∀ {ms} → Var- Infer (Infer ∷ ms)
 var0 = `var (λ where (σ ∷ _) → σ , z)
 
-toVar : m ∈ ms → Var m ms
+toVar : ∀ {m : Mode} {ms} → m ∈ ms → Var m ms
 toVar (here refl) = z
 toVar (there v) = s (toVar v)
 
-fromVar : Var m ms → m ∈ ms
+fromVar : ∀ {m : Mode} {ms} → Var m ms → m ∈ ms
 fromVar z = here refl
 fromVar (s v) = there (fromVar v)
 
-coth^Typing : Typing ns → Thinning ms ns → Typing ms
+coth^Typing : ∀ {ms ns} → Typing ns → Thinning ms ns → Typing ms
 coth^Typing Δ ρ = All.tabulate (λ x∈Γ → All.lookup Δ (fromVar (lookup ρ (toVar x∈Γ))))
 
-lookup-fromVar : ∀ Δ (v : Var m ms) → Var (m , All.lookup Δ (fromVar v)) (fromTyping ms Δ)
+lookup-fromVar : ∀ {m ms} Δ (v : Var m ms) →
+                 Var (m , All.lookup Δ (fromVar v)) (fromTyping ms Δ)
 lookup-fromVar (_ ∷ _) z     = z
 lookup-fromVar (_ ∷ _) (s v) = s (lookup-fromVar _ v)
 
-erase^coth : ∀ ms Δ (ρ : Thinning ms ns) →
+erase^coth : ∀ ms {m σ ns} Δ (ρ : Thinning ms ns) →
              Var (m , σ) (fromTyping ms (coth^Typing Δ ρ)) → Var (m , σ) (fromTyping ns Δ)
 erase^coth []       Δ ρ ()
 erase^coth (m ∷ ms) Δ ρ z     = lookup-fromVar Δ (lookup ρ z)
 erase^coth (m ∷ ms) Δ ρ (s v) = erase^coth ms Δ (select extend ρ) v
 
-th^Var- : Thinnable (Var- m)
+th^Var- : ∀ {m} → Thinnable (Var- m)
 th^Var- (`var infer) ρ = `var λ Δ →
   let (σ , v) = infer (coth^Typing Δ ρ) in
   σ , erase^coth _ Δ ρ v
