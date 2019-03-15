@@ -4,8 +4,8 @@ open import Data.Product as Product
 open import Data.Nat
 open import Data.String
 open import Data.String.Unsafe as String
-open import Data.Maybe.Base using (nothing; just)
-open import Data.Maybe.Categorical as Maybe
+open import Data.Maybe.Base using (Maybe; nothing; just; maybe′)
+open import Data.Sum.Base as Sum using (inj₁; inj₂; [_,_]′)
 open import Data.List using ([])
 open import Data.List.Relation.Unary.All using ([])
 open import Function
@@ -55,9 +55,19 @@ module _ where
   cleanupTerm (r >`let e `in b) = r >`let_`in_ <$> cleanupTerm e ⊛ cleanupTerm b
   cleanupTerm (r >`- t)         = r >`-_  <$> cleanupTerm t
 
+open RawMonad Result.monad
+
 scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
-scopecheck r = Types.fromMaybe (At start OutOfScope "placeholder")
-  $ let open RawMonad Maybe.monad in do
-  t ← ScopeCheck.scopeCheck eqdecMode _ [] [] r
-  let t′ = cleanupTerm t (Map.empty , 0)
-  return $ map₂ (Map.invert ∘′ proj₁) t′
+scopecheck r = do
+  t ← Sum.map error id $ ScopeCheck.scopeCheck eqdecMode pos? _ [] [] r
+  let (t′ , mp , _) = cleanupTerm t (Map.empty , 0)
+  pure $ t′ , Map.invert mp
+
+  where
+
+    error : String × Maybe Position → Error
+    error (str , mp) = maybe′ (At_OutOfScope str) (At start OutOfScope str) mp
+
+    pos? : ∀ σ → Raw (surface String) _ σ → Maybe Position
+    pos? _ (`var _)       = nothing
+    pos? _ (`con (r , _)) = just r
