@@ -147,13 +147,15 @@ pattern _>_`$'_      r f t = (r , App , _ , f , t , refl)
 pattern _>_`$_       r f t = `con (r > f `$' t)
 pattern _>`λ'_       r b   = (r , Lam , _ , b , refl)
 pattern _>`λ_        r b   = `con (r >`λ' b)
-pattern _>`λ'_↦_     r x b = (r , Lam , _ , (x ∷ [] , b) , refl)
-pattern _>`λ_↦_      r x b = `con (r >`λ' x ↦ b)
 pattern _>`let'_`in_ r e b = (r , Let , _ , e , b , refl)
 pattern _>`let_`in_  r e b = `con (r >`let' e `in b)
 pattern _>`-'_       r t   = (r , Emb , _ , t , refl)
 pattern _>`-_        r t   = `con (r >`-' t)
 
+pattern _>`λ'_↦_       r x b   = (r , Lam , _ , (x ∷ [] , b) , refl)
+pattern _>`λ_↦_        r x b   = `con (r >`λ' x ↦ b)
+pattern _>`let'_↦_`in_ r x e b = (r , Let , _ , e , (x ∷ [] , b) , refl)
+pattern _>`let_↦_`in_  r x e b = `con (r >`let' x ↦ e `in b)
 
 -- Examples of terms of differnent languages using the same pattern synonyms
 -- Here we use `start' as a placeholder for positions
