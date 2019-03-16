@@ -26,7 +26,7 @@ install:
 script:
   - cd ../src/stlc/
   - agda --html Main.agda
-  - cd ../
+  - cd ../../
   - mkdir -p stlc/
   - mv src/stlc/html/* stlc/
 
