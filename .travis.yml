@@ -27,7 +27,8 @@ script:
   - cd ../src/stlc/
   - agda --html Main.agda
   - cd ../
-  - mv src/html/* .
+  - mkdir -p stlc/
+  - mv src/stlc/html/* stlc/
 
 after_success:
   # uploading to gh-pages
