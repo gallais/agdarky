@@ -1,5 +1,8 @@
 module Parse where
 
+open import Level
+open import Data.Unit using (⊤)
+open import Data.Bool.Base using (Bool; true; false)
 open import Data.Nat.Properties using (≤-refl)
 open import Data.Empty
 open import Data.Product
@@ -11,6 +14,7 @@ open import Data.String as String
 import Data.String.Unsafe as String
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Data.List.Base as List using (List; []; _∷_)
+open import Data.List.NonEmpty as List⁺ using (List⁺; _∷_)
 open import Data.Vec as Vec using (Vec)
 open import Function
 
@@ -64,35 +68,23 @@ _    ≟ _    = no p where postulate p : _
 Token : Set
 Token = Position × Tok
 
-tokenize : List Char → List Token
-tokenize = go (start , []) start where
+keywords : List⁺ (String × Tok)
+keywords = ("→"   , ARR)
+         ∷ ("λ"   , LAM)
+         ∷ (":"   , COL)
+         ∷ ("let" , LET)
+         ∷ ("in"  , IN)
+         ∷ []
 
-  mutual
+breaking : Char → ∃ λ b → if b then Maybe Tok else Lift _ ⊤
+breaking c = case c of λ where
+  '(' → true , just LPAR
+  ')' → true , just RPAR
+  '.' → true , just DOT
+  '=' → true , just EQ
+  c   → if isSpace c then true , nothing else false , _
 
-    pushID : (Position × List Char) → List Token → List Token
-    pushID (p , [])  xs = xs
-    pushID acc       xs = map₂ (ID ∘′ fromList ∘′ List.reverse) acc ∷ xs
-
-    breakOn : (Position × List Char) →
-              Maybe Token → String →
-              Position → List Char → List Token
-    breakOn acc mtok str p xs = pushID acc (maybe′ _∷_ id mtok $ go (p' , []) p' xs)
-      where p' = updates str p
-
-    go : (Position × List Char) → Position → List Char → List Token
-    go acc p []                     = pushID acc []
-    go acc p ('→' ∷ xs)             = breakOn acc (just (p , ARR)) "→" p xs
-    go acc p ('(' ∷ xs)             = breakOn acc (just (p , LPAR)) "(" p xs
-    go acc p (')' ∷ xs)             = breakOn acc (just (p , RPAR)) ")" p xs
-    go acc p ('=' ∷ xs)             = breakOn acc (just (p , EQ)) "=" p xs
-    go acc p ('λ' ∷ xs)             = breakOn acc (just (p , LAM)) "λ" p xs
-    go acc p ('.' ∷ xs)             = breakOn acc (just (p , DOT)) "." p xs
-    go acc p (':' ∷ xs)             = breakOn acc (just (p , COL)) ":" p xs
-    go acc p ('l' ∷ 'e' ∷ 't' ∷ xs) = breakOn acc (just (p , LET)) "let" p xs
-    go acc p ('i' ∷ 'n' ∷ xs)       = breakOn acc (just (p , IN)) "in" p xs
-    go acc p (c ∷ xs)   = if isSpace c
-      then breakOn acc nothing (String.fromList (c ∷ [])) p xs
-      else go (map₂ (c ∷_) acc) (update c p) xs
+open import Text.Lexer keywords breaking ID using (tokenize)
 
 instance
   _ = ParserM.monadZero
@@ -158,13 +150,12 @@ parse : String → Types.Result (Parsed Infer)
 parse str = result inj₁ inj₁ (inj₂ ∘′ Success.value ∘′ proj₁)
    $′ runParser (infer bidirectional) ≤-refl input (start , [])
    where
-     input = Vec.fromList $ tokenize $′ String.toList str
+     input = Vec.fromList $ tokenize str
      module M = RawMonad ParserM.monad
 
 open import Agda.Builtin.Equality
 
-{-
-_ : tokenize (String.toList "(λ x . 1 : `a → `a)")
+_ : tokenize "(λ x . 1 : `a → `a)"
     ≡ (0 ∶ 0  , LPAR)
     ∷ (0 ∶ 1  , LAM)
     ∷ (0 ∶ 3  , ID "x")
@@ -181,7 +172,7 @@ _ = refl
 _ : parse "(λ x . 1 : `a → `a)" ≡ inj₁ At 0 ∶ 7 ParseError
 _ = refl
 
-_ : tokenize (String.toList "(λ x . x : `a → `a)")
+_ : tokenize "(λ x . x : `a → `a)"
     ≡ (start , LPAR)
     ∷ (0 ∶ 1 , LAM)
     ∷ (0 ∶ 3 , ID "x")
@@ -203,6 +194,5 @@ _ : parse "(let x = (λf.f : `a → `a) in x : `a → `a)"
     ≡ inj₂ (_ >
       _ >`let "x" ↦ _ > _ >`λ "f" ↦ (_ >`- (`var "f"))
                      `∶ (α "a" ⇒ α "a")
-         `in (_ >`- `var "x") `∶ ?)
+         `in (_ >`- `var "x") `∶ (α "a" ⇒ α "a"))
 _ = refl
--}

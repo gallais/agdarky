@@ -23,5 +23,5 @@ cd ..
 # install agdarsec
 git clone https://github.com/gallais/agdarsec
 cd agdarsec
-git checkout 71391d943d417805041e6c65e1ade32e97de6e08
+git checkout 39917e40045863ab13653bbe7c4f19fbc4f61c5f
 cd ..
