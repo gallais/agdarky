@@ -18,7 +18,7 @@ cd ..
 # install generic-syntax
 git clone https://github.com/gallais/generic-syntax
 cd generic-syntax
-git checkout ac92fe766d396cd712538099e4fd12056f234b82
+git checkout 2a2dc29f7ef082a72e59e6be84db3c8e06cdc4e2
 cd ..
 # install agdarsec
 git clone https://github.com/gallais/agdarsec

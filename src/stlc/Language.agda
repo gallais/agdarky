@@ -77,7 +77,7 @@ module Surface where
     Emb → `κ ⊤      `× `X [] Infer (`∎ Check)
 
   Parsed : Mode → Set
-  Parsed = Raw (surface String) _
+  Parsed = Raw Position (surface String) _
 
   Scoped : Mode → List Mode → Set
   Scoped = Tm (surface ℕ) _

@@ -56,18 +56,10 @@ module _ where
   cleanupTerm (r >`- t)         = r >`-_  <$> cleanupTerm t
 
 open RawMonad Result.monad
+open ScopeCheck
 
 scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
 scopecheck r = do
-  t ← Sum.map error id $ ScopeCheck.scopeCheck eqdecMode pos? _ [] [] r
+  t ← Sum.map₁ (uncurry At_OutOfScope_) $ scopeCheck eqdecMode _ [] [] r
   let (t′ , mp , _) = cleanupTerm t (Map.empty , 0)
   pure $ t′ , Map.invert mp
-
-  where
-
-    error : String × Maybe Position → Error
-    error (str , mp) = maybe′ (At_OutOfScope str) (At start OutOfScope str) mp
-
-    pos? : ∀ σ → Raw (surface String) _ σ → Maybe Position
-    pos? _ (`var _)       = nothing
-    pos? _ (`con (r , _)) = just r

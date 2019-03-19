@@ -122,7 +122,7 @@ bidirectional : ∀[ Bidirectional ]
 bidirectional = fix Bidirectional $ λ rec →
   let □check = INS.map check rec
       □infer = INS.map infer rec
-      var    = `var <$> guard (List.all isAlpha ∘′ toList) name
+      var    = uncurry `var <$> (getPosition <M&> guard (List.all isAlpha ∘′ toList) name)
       cut    = (λ where ((t , (p , _)) , σ) → p > t `∶ σ)
                <$> (theTok LPAR
                 &> □check <&> box (theTok COL) <&> box (commit type)
@@ -187,12 +187,12 @@ _ : tokenize "(λ x . x : `a → `a)"
 _ = refl
 
 _ : parse "(λ x . x : `a → `a)"
-    ≡ inj₂ (_ > _ >`λ "x" ↦ (_ >`- `var "x") `∶ (α "a" ⇒ α "a"))
+    ≡ inj₂ (_ > _ >`λ "x" ↦ (_ >`- `var _  "x") `∶ (α "a" ⇒ α "a"))
 _ = refl
 
 _ : parse "(let x = (λf.f : `a → `a) in x : `a → `a)"
     ≡ inj₂ (_ >
-      _ >`let "x" ↦ _ > _ >`λ "f" ↦ (_ >`- (`var "f"))
+      _ >`let "x" ↦ _ > _ >`λ "f" ↦ (_ >`- (`var _ "f"))
                      `∶ (α "a" ⇒ α "a")
-         `in (_ >`- `var "x") `∶ (α "a" ⇒ α "a"))
+         `in (_ >`- `var _ "x") `∶ (α "a" ⇒ α "a"))
 _ = refl
