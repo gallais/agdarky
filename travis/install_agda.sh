@@ -13,7 +13,7 @@ cd $HOME/.agda/
 # install stdlib
 git clone https://github.com/agda/agda-stdlib/ agda-stdlib-0.18
 cd agda-stdlib-0.18
-git checkout a0bfe7422d2aa0f0f49c9647659ce34e6e741375
+git checkout all-self
 cd ..
 # install generic-syntax
 git clone https://github.com/gallais/generic-syntax
@@ -23,5 +23,5 @@ cd ..
 # install agdarsec
 git clone https://github.com/gallais/agdarsec
 cd agdarsec
-git checkout 39917e40045863ab13653bbe7c4f19fbc4f61c5f
+git checkout 9c3b216e84a36f551a8a6c496c4c2371a011a0c0
 cd ..

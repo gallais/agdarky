@@ -6,8 +6,9 @@ open import Data.String
 open import Data.String.Unsafe as String
 open import Data.Maybe.Base using (Maybe; nothing; just; maybe′)
 open import Data.Sum.Base as Sum using (inj₁; inj₂; [_,_]′)
-open import Data.List using ([])
-open import Data.List.Relation.Unary.All using ([])
+open import Data.List as List using ([])
+open import Data.List.Relation.Unary.All as All using (All)
+open import Data.List.Relation.Unary.All.Properties
 open import Function
 
 open import Category.Monad
@@ -22,16 +23,9 @@ open import Language
 open Surface
 open import Types
 
--- Data.AVL is not quite usable with String at the moment IIRC
--- So instead I'm using a quick and dirty representation
-import Data.Map as M
-
-module Map = M.Map String._≟_ ℕ
-open Map using (Map; RMap)
-
 module _ where
 
-  private M = State (Map × ℕ)
+  M = State (Map × ℕ)
   open RawMonadState (StateMonadState (Map × ℕ))
 
   resolve : String → M ℕ
@@ -55,11 +49,13 @@ module _ where
   cleanupTerm (r >`let e `in b) = r >`let_`in_ <$> cleanupTerm e ⊛ cleanupTerm b
   cleanupTerm (r >`- t)         = r >`-_  <$> cleanupTerm t
 
-open RawMonad Result.monad
+open RawMonad (Compiler.monad String)
+open Compiler
 open ScopeCheck
 
-scopecheck : ∀ {m} → Parsed m → Result (Scoped m [] × RMap)
-scopecheck r = do
-  t ← Sum.map₁ (uncurry At_OutOfScope_) $ scopeCheck eqdecMode _ [] [] r
-  let (t′ , mp , _) = cleanupTerm t (Map.empty , 0)
-  pure $ t′ , Map.invert mp
+scopecheck : ∀ {Σ m} (p : Definitions Σ) → Parsed m →
+             Compiler String (Scoped m (modes p))
+scopecheck p r = do
+  let scopeError = uncurry At_OutOfScope_
+  t  ← liftResult $ Sum.map₁ scopeError $ scopeCheck eqdecMode _ _ (names p) r
+  liftState $ cleanupTerm t

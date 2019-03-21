@@ -9,8 +9,8 @@ open import Data.Product
 
 open import Data.Maybe
 open import Data.Bool using (if_then_else_)
-open import Data.Char as Char
-open import Data.String as String
+open import Data.Char as Char using (Char; isSpace; isAlpha)
+open import Data.String as String using (String; toList)
 import Data.String.Unsafe as String
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Data.List.Base as List using (List; []; _∷_)
@@ -22,6 +22,7 @@ open import Category.Monad
 
 open import Induction.Nat.Strong as INS
 
+open import Data.Nat.Base using (ℕ)
 open import Data.Subset
 open import Data.List.Sized.Interface
 open import Relation.Binary using (Decidable)
@@ -42,12 +43,13 @@ open import Language
 open Surface
 open import Types
 
-module ParserM = Agdarsec Error ⊥ (record { into = At_ParseError ∘′ proj₁ })
+module ParserM = Agdarsec (Error String) ⊥ (record { into = At_ParseError ∘′ proj₁ })
 open ParserM
 
 data Tok : Set where
   ID            : String → Tok
   ARR           : Tok
+  DEF EVL       : Tok
   LET EQ IN     : Tok
   LAM DOT       : Tok
   LPAR COL RPAR : Tok
@@ -55,6 +57,8 @@ data Tok : Set where
 _≟_ : Decidable {A = Tok} _≡_
 ID x ≟ ID y = map′ (cong ID) (λ where refl → refl) (x String.≟ y)
 ARR  ≟ ARR  = yes refl
+DEF  ≟ DEF  = yes refl
+EVL  ≟ EVL  = yes refl
 LET  ≟ LET  = yes refl
 EQ   ≟ EQ   = yes refl
 IN   ≟ IN   = yes refl
@@ -74,6 +78,8 @@ keywords = ("→"   , ARR)
          ∷ (":"   , COL)
          ∷ ("let" , LET)
          ∷ ("in"  , IN)
+         ∷ ("def" , DEF)
+         ∷ ("eval", EVL)
          ∷ []
 
 breaking : Char → ∃ λ b → if b then Maybe Tok else Lift _ ⊤
@@ -122,7 +128,7 @@ bidirectional : ∀[ Bidirectional ]
 bidirectional = fix Bidirectional $ λ rec →
   let □check = INS.map check rec
       □infer = INS.map infer rec
-      var    = uncurry `var <$> (getPosition <M&> guard (List.all isAlpha ∘′ toList) name)
+      var    = uncurry (flip `var) <$> (guard (List.all isAlpha ∘′ toList) name <&M> getPosition)
       cut    = (λ where ((t , (p , _)) , σ) → p > t `∶ σ)
                <$> (theTok LPAR
                 &> □check <&> box (theTok COL) <&> box (commit type)
@@ -146,12 +152,22 @@ bidirectional = fix Bidirectional $ λ rec →
             ; check = check <|> parens (INS.map commit □check)
             }
 
-parse : String → Types.Result (Parsed Infer)
+definitions : ∀[ Parser P (List⁺ (String × Type String × Parsed Check)) ]
+definitions = list⁺ $ theTok DEF
+                  &> box (name
+                 <&> box (theTok COL
+                  &> box (type
+                 <&> box (theTok EQ
+                  &> box (check bidirectional)))))
+
+program : ∀[ Parser P (List⁺ (String × Type String × Parsed Check) × Parsed Infer) ]
+program = definitions <&> box (theTok EVL &> box (infer bidirectional))
+
+parse : String → Types.Result String
+        (List⁺ (String × Type String × Parsed Check) × Parsed Infer)
 parse str = result inj₁ inj₁ (inj₂ ∘′ Success.value ∘′ proj₁)
-   $′ runParser (infer bidirectional) ≤-refl input (start , [])
-   where
-     input = Vec.fromList $ tokenize str
-     module M = RawMonad ParserM.monad
+          $′ runParser program ≤-refl input (start , [])
+  where input = Vec.fromList $ tokenize str
 
 open import Agda.Builtin.Equality
 
@@ -169,7 +185,14 @@ _ : tokenize "(λ x . 1 : `a → `a)"
     ∷ []
 _ = refl
 
-_ : parse "(λ x . 1 : `a → `a)" ≡ inj₁ At 0 ∶ 7 ParseError
+_ : parse "def  ida : `a → `a = λ x . x
+\         \def  idb : `a → `a = λ y . ida y
+\         \eval idb"
+    ≡ (inj₂ ((("ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
+             ∷ ("idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))
+             ∷ []
+             ) , `var (2 ∶ 5) "idb"
+      ))
 _ = refl
 
 _ : tokenize "(λ x . x : `a → `a)"
@@ -184,15 +207,4 @@ _ : tokenize "(λ x . x : `a → `a)"
     ∷ (0 ∶ 16 , ID "`a")
     ∷ (0 ∶ 18 , RPAR)
     ∷ []
-_ = refl
-
-_ : parse "(λ x . x : `a → `a)"
-    ≡ inj₂ (_ > _ >`λ "x" ↦ (_ >`- `var _  "x") `∶ (α "a" ⇒ α "a"))
-_ = refl
-
-_ : parse "(let x = (λf.f : `a → `a) in x : `a → `a)"
-    ≡ inj₂ (_ >
-      _ >`let "x" ↦ _ > _ >`λ "f" ↦ (_ >`- (`var _ "f"))
-                     `∶ (α "a" ⇒ α "a")
-         `in (_ >`- `var _ "x") `∶ (α "a" ⇒ α "a"))
 _ = refl

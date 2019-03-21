@@ -2,7 +2,7 @@ module Language where
 
 open import Data.Unit
 open import Data.Empty
-open import Data.Product
+open import Data.Product as Prod
 open import Data.Nat
 open import Data.List as List
 open import Data.List.Relation.Unary.All -- important for the pattern synonyms!
@@ -136,10 +136,13 @@ pattern _`$'_      f t = (App , _ , f , t , refl)
 pattern _`$_       f t = `con (_ , f `$' t)
 pattern `λ'_       b   = (Lam , _ , b , refl)
 pattern `λ_        b   = `con (_ , `λ' b)
+pattern `λ'_↦_     x b  = (_ , Lam , _ , (x ∷ [] , b) , refl)
+pattern `λ_↦_       x b = `con (`λ' x ↦ b)
+
 pattern `let'_`in_ e b = (Let , _ , e , b , refl)
 pattern `let_`in_  e b = `con (_ , `let' e `in b)
-pattern `-'        t   = (Emb , _ , t , refl)
-pattern `-         t   = `con (_ , `-' t)
+pattern `-'_        t   = (Emb , _ , t , refl)
+pattern `-_         t   = `con (_ , `-' t)
 
 -- Position-aware pattern synonyms (usable both on the LHS and RHS)
 pattern _>_`∶'_      r t σ = (r , Cut , σ , t , refl)
@@ -166,3 +169,48 @@ _ = start >`λ (start >`- `var z)
 
 _ : ∀ {σ} → Internal.Typed (Check , σ ⇒ σ) []
 _ = start >`λ (start >`- `var z)
+
+
+data Definitions : List (Type ℕ) → Set
+record Definition {ds} (p : Definitions ds) : Set
+
+infixl 11 _∶_≔_
+record Definition {ds} p where
+  constructor _∶_≔_
+  field name : String
+        type : Type ℕ
+        term : Internal.Typed (Check , type) (List.map (Infer ,_) ds)
+
+infixl 10 _&_
+data Definitions where
+  []  : Definitions []
+  _&_ : ∀ {ds} (p : Definitions ds) (d : Definition p) →
+        Definitions (Definition.type d ∷ ds)
+
+modes : ∀ {Γ} → Definitions Γ → List Mode
+modes {Γ} _ = List.map (const Infer) Γ
+
+names : ∀ {Γ} (ds : Definitions Γ) → All (const String) (modes ds)
+names []       = []
+names (ds & d) = Definition.name d ∷ names ds
+
+Expression : Type ℕ ─Scoped
+Expression σ Γ = Internal.Typed (Infer , σ) (List.map (Infer ,_) Γ)
+
+infix 9 assuming_have_
+data Program : Set where
+  assuming_have_ : ∀ {σ Γ} → Definitions Γ → Expression σ Γ → Program
+
+{-
+-- Can't quite write this: we would have to also write down the position of each node
+
+_ : Program
+_ = let nat = α 0 ⇒ (α 0 ⇒ α 0) ⇒ α 0 in assuming []
+  & "id"   ∶ nat ⇒ nat ≔ `λ `- `var z
+  & "zero" ∶ nat       ≔ `λ `λ `- `var (s z)
+  & "suc"  ∶ nat ⇒ nat ≔ `λ `λ `λ `- (`var z
+                         `$ (`- ((`var (s (s z))
+                         `$ (`- (`var (s z))))
+                         `$ (`- (`var z)))))
+    have `var (s (s z)) `$ (`- (`var z `$ (`- (`var z `$ (`- `var (s z))))))
+-}

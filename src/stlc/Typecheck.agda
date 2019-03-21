@@ -1,18 +1,20 @@
 module Typecheck where
 
-open import Data.Product as Product
+open import Data.Product as Prod
 open import Data.Nat as ℕ using (ℕ; _≟_)
-open import Data.List hiding (lookup ; fromMaybe)
+open import Data.List as List hiding (lookup ; fromMaybe)
 open import Data.List.Relation.Unary.All as All hiding (lookup)
+import Data.List.Relation.Unary.All.Properties as Allₚ
 open import Data.List.Relation.Unary.Any using (here; there)
 open import Data.List.Membership.Propositional
-open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Relation.Binary.PropositionalEquality as P using (_≡_; refl)
 open import Data.Maybe hiding (fromMaybe)
 open import Function
 
 open import Category.Monad
 
 open import var hiding (_<$>_)
+open import varlike using (base; vl^Var)
 open import environment hiding (_<$>_)
 open import Generic.Syntax
 open import Generic.Semantics
@@ -28,8 +30,13 @@ Typing : List Mode → Set
 Typing = All (const (Type ℕ))
 
 fromTyping : ∀ ms → Typing ms → List (Mode × Type ℕ)
-fromTyping []       []       = []
-fromTyping (m ∷ ms) (σ ∷ σs) = (m , σ) ∷ fromTyping ms σs
+fromTyping ms = toList
+
+eq^fromTyping :
+  ∀ Γ → fromTyping (List.map (const Infer) Γ) (Allₚ.map⁺ All.self)
+      ≡ List.map (Infer ,_) Γ
+eq^fromTyping []      = refl
+eq^fromTyping (σ ∷ Γ) = P.cong (_ ∷_) (eq^fromTyping Γ)
 
 Elab : (Mode × Type ℕ) ─Scoped → Mode × Type ℕ → (ms : List Mode) → Typing ms → Set
 Elab T σ ms Γ = T σ (fromTyping ms Γ)
@@ -40,6 +47,13 @@ data Var- : Mode ─Scoped where
 
 var0 : ∀ {ms} → Var- Infer (Infer ∷ ms)
 var0 = `var (λ where (σ ∷ _) → σ , z)
+
+var : ∀ {m} (Σ : List (Type ℕ)) → let Γ = List.map (const Infer) Σ in
+      Var m Γ → Var- m Γ
+var [] ()
+var (m ∷ Σ) z     = var0
+var (m ∷ Σ) (s v) with var Σ v
+... | `var infer = `var (λ where (σ ∷ Γ) → Prod.map₂ s $ infer Γ)
 
 toVar : ∀ {m : Mode} {ms} → m ∈ ms → Var m ms
 toVar (here refl) = z
@@ -73,14 +87,15 @@ isArrow (α _) = nothing
 isArrow (σ ⇒ τ) = just ( _ , refl)
 
 Type- : Mode → List Mode → Set
-Type- Infer Γ = ∀ γ   → Result (∃ λ σ → Typed (Infer , σ) (fromTyping Γ γ))
-Type- Check Γ = ∀ γ σ → Result (Typed (Check , σ) (fromTyping Γ γ))
+Type- Infer Γ = ∀ γ   → Result ℕ (∃ λ σ → Typed (Infer , σ) (fromTyping Γ γ))
+Type- Check Γ = ∀ γ σ → Result ℕ (Typed (Check , σ) (fromTyping Γ γ))
 
-open RawMonad Result.monad hiding (return)
+open RawMonad (Result.monad ℕ) hiding (return)
+open Result
 
 Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck = th^Var-
-Sem.var   Typecheck = λ where (`var infer) γ → pure (map₂ `var (infer γ))
+Sem.var   Typecheck = λ where (`var infer) γ → pure $ map₂ `var (infer γ)
 Sem.alg   Typecheck = λ where
   (r > t `∶' σ) γ     → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
   (r > f `$' t) γ     → do
@@ -101,10 +116,7 @@ Sem.alg   Typecheck = λ where
     refl     ← fromMaybe (At r Expected σ Got τ) (decToMaybe $ eqdecType ℕ._≟_ τ σ)
     pure $ r >`- t′
 
-Type-_ed : Mode → Set
-Type- Infer ed = Result (∃ λ σ → Typed (Infer , σ) [])
-Type- Check ed = ∀ σ → Result (Typed (Check , σ) [])
-
-typecheck : ∀ {m} → Scoped m [] → Type- m ed
-typecheck {Infer} t = Sem.closed Typecheck t []
-typecheck {Check} t = Sem.closed Typecheck t []
+type- : ∀ (m : Mode) (Σ : List (Type ℕ)) → let Γ = List.map (const Infer) Σ in
+        Scoped m Γ → Type- m Γ
+type- Infer Σ t γ   = Sem.sem Typecheck (pack (var Σ)) t γ
+type- Check Σ t γ σ = Sem.sem Typecheck (pack (var Σ)) t γ σ

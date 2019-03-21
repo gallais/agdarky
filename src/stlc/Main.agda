@@ -2,11 +2,18 @@ module Main where
 
 open import Data.Product
 open import Data.String
-open import Data.Sum.Base
+open import Data.Sum
+open import Data.List.Base as List
+import Data.List.NonEmpty as List⁺
+open import Data.List.Relation.Unary.All
+open import Data.List.Relation.Unary.All.Properties
 open import Text.Parser.Position
 open import Function
+open import Relation.Binary.PropositionalEquality
 
-open import Language
+open import var using (z; s)
+open import Generic.Syntax using (`var)
+open import Language; open Surface
 open import Types
 open import Parse
 open import Scopecheck
@@ -15,46 +22,41 @@ open import LetInline
 open import Print
 
 open import Category.Monad
-open RawMonad Result.monad
 
-pipeline : String → Result String
-pipeline str = do
-  parsed         ← parse str
-  (scoped , mp)  ← scopecheck parsed
-  (σ , typed)    ← typecheck scoped
-  let simplified = let-inline typed
-  pure $ print simplified mp
+open RawMonad (Compiler.monad String)
+open Compiler
+
+declarations : List (String × Type String × Parsed Check) →
+               ∀ {Γ} → Definitions Γ → Compiler String (∃ Definitions)
+declarations []             p = pure $ -, p
+declarations ((str , sig , decl) ∷ decls) p = do
+  scoped ← scopecheck p decl
+  σ      ← liftState $ cleanupType sig
+  typed  ← ppCompiler $ liftResult $ type- Check _ scoped (map⁺ self) σ
+  let x = str ∶ σ ≔ subst (Internal.Typed _) (eq^fromTyping _) typed
+  declarations decls (p & x)
+
+declaration : Parsed Infer → ∀ {Γ} → Definitions Γ →
+              Compiler String (∃ λ σ → Expression σ Γ)
+declaration d {Γ} p = do
+  scoped      ← scopecheck p d
+  (σ , typed) ← ppCompiler $ liftResult $ type- Infer Γ scoped (map⁺ self)
+  pure (σ , subst (Internal.Typed _) (eq^fromTyping _) typed)
+
+pipeline : String → Error String ⊎ Program
+pipeline str = Compiler.run $ do
+  (decls , expr) ← liftResult $ parse str
+  (Γ , defs)     ← declarations (List⁺.toList decls) []
+  (σ , eval)     ← declaration expr defs
+  pure $ assuming defs have eval
 
 open import Agda.Builtin.Equality
 
--- Success
-
-_ : pipeline "(λa.a : `a → `a)" ≡ inj₂ "(λa.a : `a → `a)"
-_ = refl
-
-_ : pipeline "(λf.λx. let y = f x in y : (`a → `b) → (`a → `b))"
-  ≡ inj₂ "(λa.λb.a b : (`a → `b) → `a → `b)"
-_ = refl
-
-_ : pipeline "(λf.λx. f (let y = x in y) x : (`a → `a → `b) → `a → `b)"
-  ≡ inj₂ "(λa.λb.a b b : (`a → `a → `b) → `a → `b)"
-_ = refl
-
-_ : pipeline "(λg.λf.λa. let b = f a in g a b : (`a → `b → `c) → (`a → `b) → `a → `c)"
-  ≡ inj₂ "(λa.λb.λc.a c (b c) : (`a → `b → `c) → (`a → `b) → `a → `c)"
-_ = refl
-
--- Errors
-
-_ : pipeline "(λa.a : A → A)" ≡ inj₁ (At 0 ∶ 8 ParseError )
-_ = refl
-
-_ : pipeline "(λa.b : `a → `a)" ≡ inj₁ (At 0 ∶ 3 OutOfScope "b")
-_ = refl
-
-_ : pipeline "(λa.a : `a → `b)" ≡ inj₁ (At 0 ∶ 3 Expected α 1 Got α 0)
-_ = refl
-
-_ : pipeline "(λa.λf.λx. f a x : `a → (`a → `b → `c) → `c)"
-  ≡ inj₁ (At 0 ∶ 7 NotAnArrow α 2)
+_ : from-inj₂ (pipeline "def id  : `a → `a = λx. x
+\            \def snd : `a → `b → `b = λx. λy.y
+\            \eval id")
+  ≡ assuming []
+  & "id"  ∶ α 0 ⇒ α 0       ≔ `λ `- `var z
+  & "snd" ∶ α 0 ⇒ α 1 ⇒ α 1 ≔ `λ `λ `- `var z
+  have `var (s z)
 _ = refl
