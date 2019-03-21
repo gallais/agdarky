@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html><head><meta charset="utf-8"><title>System.Environment</title><link rel="stylesheet" href="Agda.css"></head><body><pre><a id="1" class="Keyword">module</a> <a id="8" href="System.Environment.html" class="Module">System.Environment</a> <a id="27" class="Keyword">where</a>
+
+<a id="34" class="Keyword">open</a> <a id="39" class="Keyword">import</a> <a id="46" href="Data.List.Base.html" class="Module">Data.List.Base</a> <a id="61" class="Keyword">using</a> <a id="67" class="Symbol">(</a><a id="68" href="Agda.Builtin.List.html#80" class="Datatype">List</a><a id="72" class="Symbol">)</a>
+<a id="74" class="Keyword">open</a> <a id="79" class="Keyword">import</a> <a id="86" href="Data.String.Base.html" class="Module">Data.String.Base</a> <a id="103" class="Keyword">using</a> <a id="109" class="Symbol">(</a><a id="110" href="Agda.Builtin.String.html#165" class="Postulate">String</a><a id="116" class="Symbol">)</a>
+
+<a id="119" class="Keyword">import</a> <a id="126" href="IO.Primitive.html" class="Module">IO.Primitive</a> <a id="139" class="Symbol">as</a> <a id="142" class="Module">Prim</a>
+<a id="147" class="Keyword">open</a> <a id="152" class="Keyword">import</a> <a id="159" href="IO.html" class="Module">IO</a>
+
+<a id="163" class="Keyword">private</a>
+  <a id="173" class="Keyword">postulate</a>
+    <a id="primGetArgs"></a><a id="187" href="System.Environment.html#187" class="Postulate">primGetArgs</a> <a id="199" class="Symbol">:</a> <a id="201" href="Agda.Builtin.IO.html#70" class="Postulate">Prim.IO</a> <a id="209" class="Symbol">(</a><a id="210" href="Agda.Builtin.List.html#80" class="Datatype">List</a> <a id="215" href="Agda.Builtin.String.html#165" class="Postulate">String</a><a id="221" class="Symbol">)</a>
+
+<a id="224" class="Symbol">{-#</a> <a id="228" class="Keyword">FOREIGN</a> GHC import qualified System.Environment as Env     <a id="287" class="Symbol">#-}</a>
+<a id="291" class="Symbol">{-#</a> <a id="295" class="Keyword">FOREIGN</a> GHC import qualified Data.Text as T                <a id="354" class="Symbol">#-}</a>
+<a id="358" class="Symbol">{-#</a> <a id="362" class="Keyword">COMPILE</a> GHC <a id="374" href="System.Environment.html#187" class="Postulate">primGetArgs</a> = fmap (fmap T.pack) Env.getArgs <a id="419" class="Symbol">#-}</a>
+
+<a id="getArgs"></a><a id="424" href="System.Environment.html#424" class="Function">getArgs</a> <a id="432" class="Symbol">:</a> <a id="434" href="IO.html#926" class="Datatype">IO</a> <a id="437" class="Symbol">(</a><a id="438" href="Agda.Builtin.List.html#80" class="Datatype">List</a> <a id="443" href="Agda.Builtin.String.html#165" class="Postulate">String</a><a id="449" class="Symbol">)</a>
+<a id="451" href="System.Environment.html#424" class="Function">getArgs</a> <a id="459" class="Symbol">=</a> <a id="461" href="IO.html#967" class="InductiveConstructor">lift</a> <a id="466" href="System.Environment.html#187" class="Postulate">primGetArgs</a>
+</pre></body></html>
