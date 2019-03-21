@@ -74,7 +74,9 @@ Token = Position × Tok
 
 keywords : List⁺ (String × Tok)
 keywords = ("→"   , ARR)
+         ∷ ("->"  , ARR)
          ∷ ("λ"   , LAM)
+         ∷ ("\\"  , LAM)
          ∷ (":"   , COL)
          ∷ ("let" , LET)
          ∷ ("in"  , IN)
@@ -114,7 +116,7 @@ parens □p = theTok LPAR &> □p <& box (theTok RPAR)
 type : ∀[ Parser P (Type String) ]
 type = fix _ $ λ rec →
   let varlike str = case String.toList str of λ where
-        ('`' ∷ nm) → just (String.fromList nm)
+        ('\'' ∷ nm) → just (String.fromList nm)
         _ → nothing
   in chainr1 (α <$> guardM varlike name <|> parens rec)
              (box (_⇒_ <$ theTok ARR))
@@ -185,8 +187,8 @@ _ : tokenize "(λ x . 1 : `a → `a)"
     ∷ []
 _ = refl
 
-_ : parse "def  ida : `a → `a = λ x . x
-\         \def  idb : `a → `a = λ y . ida y
+_ : parse "def  ida : 'a → 'a = λ x . x
+\         \def  idb : 'a → 'a = λ y . ida y
 \         \eval idb"
     ≡ (inj₂ ((("ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
              ∷ ("idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))

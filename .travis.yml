@@ -24,11 +24,11 @@ install:
   - travis_wait 50 ./install_agda.sh
 
 script:
-  - cd ../src/stlc/
+  - cd ../stlc/src
   - agda --html Main.agda
   - cd ../../
   - mkdir -p stlc/
-  - mv src/stlc/html/* stlc/
+  - mv stlc/src/html/* stlc/
 
 after_success:
   # uploading to gh-pages

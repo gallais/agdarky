@@ -4,9 +4,9 @@ open import Data.Unit
 open import Data.Empty
 open import Data.Product as Prod
 open import Data.Nat
-open import Data.List as List
+open import Data.List as List using (List; []; _∷_)
 open import Data.List.Relation.Unary.All -- important for the pattern synonyms!
-open import Data.String as String
+open import Data.String as String using (String; _++_)
 open import Function
 open import Function.Equivalence
 open import Relation.Nullary
@@ -18,12 +18,20 @@ open import Relation.Binary.PropositionalEquality
 open import var using (z; s; _─Scoped)
 open import Generic.Syntax
 open import Generic.AltSyntax
-open import Text.Parser.Position
+open import Text.Parser.Position as Position using (Position; _∶_; start)
 
 infixr 6 _⇒_
 data Type (A : Set) : Set where
   α   : A → Type A
   _⇒_ : (σ τ : Type A) → Type A
+
+show : Type String → String
+show (α str) = str
+show (σ ⇒ τ) = pshow σ ++ show τ where
+
+  pshow : Type String → String
+  pshow σ@(α _)   = show σ
+  pshow σ@(_ ⇒ _) = "(" ++ show σ ++ ")"
 
 data Mode : Set where
   Infer Check : Mode

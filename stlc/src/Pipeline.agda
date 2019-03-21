@@ -1,4 +1,4 @@
-module Main where
+module Pipeline where
 
 open import Data.Product
 open import Data.String
@@ -52,8 +52,8 @@ pipeline str = Compiler.run $ do
 
 open import Agda.Builtin.Equality
 
-_ : from-inj₂ (pipeline "def id  : `a → `a = λx. x
-\            \def snd : `a → `b → `b = λx. λy.y
+_ : from-inj₂ (pipeline "def id  : 'a → 'a = λx. x
+\            \def snd : 'a → 'b → 'b = λx. λy.y
 \            \eval id")
   ≡ assuming []
   & "id"  ∶ α 0 ⇒ α 0       ≔ `λ `- `var z
