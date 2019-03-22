@@ -53,10 +53,10 @@ pipeline str = Compiler.run $ do
 open import Agda.Builtin.Equality
 
 _ : from-inj₂ (pipeline "def id  : 'a → 'a = λx. x
-\            \def snd : 'a → 'b → 'b = λx. λy.y
+\            \def deux : 'a → 'b → 'b = λx. λy.y
 \            \eval id")
   ≡ assuming []
-  & "id"  ∶ α 0 ⇒ α 0       ≔ `λ `- `var z
-  & "snd" ∶ α 0 ⇒ α 1 ⇒ α 1 ≔ `λ `λ `- `var z
+  & "id"   ∶ α 0 ⇒ α 0       ≔ `λ `- `var z
+  & "deux" ∶ α 0 ⇒ α 1 ⇒ α 1 ≔ `λ `λ `- `var z
   have `var (s z)
 _ = refl

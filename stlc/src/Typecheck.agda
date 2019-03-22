@@ -83,8 +83,12 @@ th^Var- (`var infer) ρ = `var λ Δ →
   σ , erase^coth _ Δ ρ v
 
 isArrow : (σ⇒τ : Type ℕ) → Maybe (Σ[ στ ∈ Type ℕ × Type ℕ ] σ⇒τ ≡ uncurry _⇒_ στ)
-isArrow (α _) = nothing
 isArrow (σ ⇒ τ) = just ( _ , refl)
+isArrow _ = nothing
+
+isProduct : (σ⊗τ : Type ℕ) → Maybe (Σ[ στ ∈ Type ℕ × Type ℕ ] σ⊗τ ≡ uncurry _⊗_ στ)
+isProduct (σ ⊗ τ) = just ( _ , refl)
+isProduct _ = nothing
 
 Type- : Mode → List Mode → Set
 Type- Infer Γ = ∀ γ   → Result ℕ (∃ λ σ → Typed (Infer , σ) (fromTyping Γ γ))
@@ -97,16 +101,29 @@ Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck = th^Var-
 Sem.var   Typecheck = λ where (`var infer) γ → pure $ map₂ `var (infer γ)
 Sem.alg   Typecheck = λ where
-  (r > t `∶' σ) γ     → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
-  (r > f `$' t) γ     → do
+  (r > t `∶' σ) γ → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
+  (r > f `$' t) γ → do
     (σ⇒τ , f′)       ← f γ
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     t′               ← t γ σ
     pure $ -, r > f′ `$ t′
+  (r >`fst' e) γ → do
+    (σ⊗τ , e′)       ← e γ
+    ((σ , τ) , refl) ← fromMaybe (At r NotAProduct σ⊗τ) (isProduct σ⊗τ)
+    pure $ -, r >`fst e′
+  (r >`snd' e) γ → do
+    (σ⊗τ , e′)       ← e γ
+    ((σ , τ) , refl) ← fromMaybe (At r NotAProduct σ⊗τ) (isProduct σ⊗τ)
+    pure $ -, r >`snd e′
   (r >`λ' b) γ σ⇒τ → do
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     b′               ← b extend (ε ∙ var0) (σ ∷ γ) τ
     pure $ r >`λ b′
+  (r > a `,' b) Γ σ⊗τ → do
+    ((σ , τ) , refl) ← fromMaybe (At r NotAProduct σ⊗τ) (isProduct σ⊗τ)
+    a′               ← a Γ σ
+    b′               ← b Γ τ
+    pure $ r > a′ `, b′
   (r >`let' e `in b) γ τ → do
     (σ , e′) ← e γ
     b′       ← b extend (ε ∙ var0) (σ ∷ γ) τ

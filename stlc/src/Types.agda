@@ -26,6 +26,7 @@ data Error (A : Set) : Set where
   At_OutOfScope_            : Position → String → Error A
   At_Expected_Got_          : Position → Type A → Type A → Error A
   At_NotAnArrow_            : Position → Type A → Error A
+  At_NotAProduct_           : Position → Type A → Error A
   At_ErrorWhenPrintingError : Position → Error A
 
 show : Error String → String
@@ -35,6 +36,7 @@ show err = case err of λ where
   (At p Expected σ Got τ)       → at p $ "expected type " ++ Language.show σ
                                       ++ " but got type " ++ Language.show τ ++ " instead."
   (At p NotAnArrow σ)           → at p $ "the type " ++ Language.show σ ++ " is not an arrow type."
+  (At p NotAProduct σ)          → at p $ "the type " ++ Language.show σ ++ " is not a product type."
   (At p ErrorWhenPrintingError) → at p $ "error when printing error."
 
     where at : Position → String → String
@@ -88,10 +90,11 @@ module Compiler where
 
 module PrettyPrint where
 
-  open RawMonad (MC.monad {L.zero})
+  open RawMonad (MC.monad {L.zero}) using (_<$>_; _⊛_)
 
   ppType : RMap → Type ℕ → Maybe (Type String)
   ppType rm (α k)   = α <$> RMap.assoc k rm
+  ppType rm (σ ⊗ τ) = _⊗_ <$> ppType rm σ ⊛ ppType rm τ
   ppType rm (σ ⇒ τ) = _⇒_ <$> ppType rm σ ⊛ ppType rm τ
 
   ppError : RMap → Error ℕ → Error String
@@ -104,6 +107,10 @@ module PrettyPrint where
         (just err) → err
     (At p NotAnArrow σ)           →
       case At p NotAnArrow_ <$> ppType rm σ of λ where
+        nothing    → At p ErrorWhenPrintingError
+        (just err) → err
+    (At p NotAProduct σ)           →
+      case At p NotAProduct_ <$> ppType rm σ of λ where
         nothing    → At p ErrorWhenPrintingError
         (just err) → err
     (At p ErrorWhenPrintingError) → At p ErrorWhenPrintingError

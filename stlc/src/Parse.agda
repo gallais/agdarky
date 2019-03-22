@@ -47,16 +47,18 @@ module ParserM = Agdarsec (Error String) ⊥ (record { into = At_ParseError ∘�
 open ParserM
 
 data Tok : Set where
-  ID            : String → Tok
-  ARR           : Tok
-  DEF EVL       : Tok
-  LET EQ IN     : Tok
-  LAM DOT       : Tok
-  LPAR COL RPAR : Tok
+  ID                : String → Tok
+  ARR PRD           : Tok
+  DEF EVL           : Tok
+  LET EQ IN         : Tok
+  LAM DOT           : Tok
+  FST SND           : Tok
+  LPAR COL COM RPAR : Tok
 
 _≟_ : Decidable {A = Tok} _≡_
 ID x ≟ ID y = map′ (cong ID) (λ where refl → refl) (x String.≟ y)
 ARR  ≟ ARR  = yes refl
+PRD  ≟ PRD  = yes refl
 DEF  ≟ DEF  = yes refl
 EVL  ≟ EVL  = yes refl
 LET  ≟ LET  = yes refl
@@ -64,8 +66,11 @@ EQ   ≟ EQ   = yes refl
 IN   ≟ IN   = yes refl
 LAM  ≟ LAM  = yes refl
 DOT  ≟ DOT  = yes refl
+FST  ≟ FST  = yes refl
+SND  ≟ SND  = yes refl
 LPAR ≟ LPAR = yes refl
 COL  ≟ COL  = yes refl
+COM  ≟ COM  = yes refl
 RPAR ≟ RPAR = yes refl
 _    ≟ _    = no p where postulate p : _
 
@@ -75,11 +80,14 @@ Token = Position × Tok
 keywords : List⁺ (String × Tok)
 keywords = ("→"   , ARR)
          ∷ ("->"  , ARR)
+         ∷ ("*"   , PRD)
          ∷ ("λ"   , LAM)
          ∷ ("\\"  , LAM)
          ∷ (":"   , COL)
          ∷ ("let" , LET)
          ∷ ("in"  , IN)
+         ∷ ("fst" , FST)
+         ∷ ("snd" , SND)
          ∷ ("def" , DEF)
          ∷ ("eval", EVL)
          ∷ []
@@ -89,6 +97,7 @@ breaking c = case c of λ where
   '(' → true , just LPAR
   ')' → true , just RPAR
   '.' → true , just DOT
+  ',' → true , just COM
   '=' → true , just EQ
   c   → if isSpace c then true , nothing else false , _
 
@@ -119,7 +128,7 @@ type = fix _ $ λ rec →
         ('\'' ∷ nm) → just (String.fromList nm)
         _ → nothing
   in chainr1 (α <$> guardM varlike name <|> parens rec)
-             (box (_⇒_ <$ theTok ARR))
+             (box $ (_⇒_ <$ theTok ARR) <|> _⊗_ <$ theTok PRD)
 
 record Bidirectional n : Set where
   field infer : Parser P (Parsed Infer) n
@@ -138,7 +147,11 @@ bidirectional = fix Bidirectional $ λ rec →
       app    = (λ where (p , c) e → p > e `$ c) <$>
                 (getPosition <M&> ((uncurry _>`-_ <$> (getPosition <M&> var))
                               <|> parens □check))
-      infer  = iterate (var <|> cut <|> parens (INS.map commit □infer))
+
+      proj   = (λ where ((p , t) , e) → [ const (p >`fst e) , const (p >`snd e) ]′ t)
+             <$> (getPosition <M&> (theTok FST <⊎> theTok SND)
+             <&> box (var <|> parens □infer))
+      infer  = iterate (var <|> cut <|> proj <|> parens (INS.map commit □infer))
                        (box app)
       lam    = (λ where ((p , x) , c) → p >`λ x ↦ c)
                <$> (theTok LAM &> box (getPosition <M&> name)
@@ -148,10 +161,23 @@ bidirectional = fix Bidirectional $ λ rec →
                <&> box (theTok EQ &> INS.map commit □infer)
                <&> box (theTok IN &> INS.map commit □check)
                )
+
+      paredc = (λ p → let (c , r) = p; cons c = uncurry (_> c `,_) in
+                  [ cons c ∘′ List⁺.foldr₁ (λ where (p , c) → (p ,_) ∘′ cons c)
+                  , const c ]′ r) <$>
+              -- opening parenthesis
+              ((theTok LPAR &> □check) <&> box (
+              -- followed by either
+                  -- either a list of other values
+                  (list⁺ ((getPosition <M& theTok COM) <&> INS.map commit □check)
+                   <& box (theTok RPAR))
+                  -- or a closing parenthesis
+              <⊎> theTok RPAR
+              ))
       emb    = uncurry _>`-_ <$> (getPosition <M&> infer)
       check  = lam <|> letin <|> emb
   in record { infer = infer <|> parens (INS.map commit □infer)
-            ; check = check <|> parens (INS.map commit □check)
+            ; check = check <|> paredc
             }
 
 definitions : ∀[ Parser P (List⁺ (String × Type String × Parsed Check)) ]
@@ -190,11 +216,34 @@ _ = refl
 _ : parse "def  ida : 'a → 'a = λ x . x
 \         \def  idb : 'a → 'a = λ y . ida y
 \         \eval idb"
-    ≡ (inj₂ ((("ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
-             ∷ ("idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))
-             ∷ []
-             ) , `var (2 ∶ 5) "idb"
-      ))
+  ≡ (inj₂ ((("ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
+           ∷ ("idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))
+           ∷ []
+           ) , `var (2 ∶ 5) "idb"
+    ))
+_ = refl
+
+_ : parse "def  thd : ('a * 'b * 'c) -> 'c = λ p. fst (fst p)
+\         \eval thd"
+  ≡ inj₂ ((("thd" , (α "a" ⊗ (α "b" ⊗ α "c")) ⇒ α "c"
+           , `λ "p" ↦ `- `fst `fst `var (0 ∶ 48) "p"
+           )
+           ∷ []
+          )
+         , `var (1 ∶ 5) "thd"
+         )
+_ = refl
+
+_ : parse "def swap : ('a * 'b) → ('b * 'a) = λp. (snd p, fst p, snd p)
+\         \eval swap"
+  ≡ inj₂ (("swap" , (α "a" ⊗ α "b") ⇒ (α "b" ⊗ α "a")
+          , (0 ∶ 35) >`λ "p" ↦ ((`- `snd `var (0 ∶ 44) "p")
+                             `, ((`- `fst `var (0 ∶ 51) "p")
+                             `, (`- `snd `var (0 ∶ 58) "p")))
+          )
+         ∷ []
+         , `var (1 ∶ 5) "swap"
+         )
 _ = refl
 
 _ : tokenize "(λ x . x : `a → `a)"
