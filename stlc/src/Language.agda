@@ -21,6 +21,7 @@ open import Generic.AltSyntax
 open import Text.Parser.Position as Position using (Position; _∶_; start)
 
 infixr 6 _⇒_
+infixr 7 _⊗_
 data Type (A : Set) : Set where
   α   : A → Type A
   _⊗_ : (σ τ : Type A) → Type A
