@@ -1,0 +1,3 @@
+def swapab : ('a * 'b) -> ('b * 'a) = \p. (snd p, fst p)
+def swapba : ('b * 'a) -> ('a * 'b) = \p. (snd p, fst p)
+eval (\p. swapba (swapab p) : ('a * 'b) -> ('a * 'b))

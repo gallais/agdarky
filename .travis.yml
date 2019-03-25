@@ -24,7 +24,9 @@ install:
   - travis_wait 50 ./install_agda.sh
 
 script:
-  - cd ../stlc/src
+  - cd ../stlc/
+  - make
+  - cd src/
   - agda --html Main.agda
   - cd ../../
   - mkdir -p stlc/
