@@ -30,7 +30,7 @@ data Type (A : Set) : Set where
 show  : Type String → String
 pshow : Type String → String
 
-show (α str) = str
+show (α str) = "'" ++ str
 show (σ ⊗ τ) = pshow σ ++ " * " ++ show τ
 show (σ ⇒ τ) = pshow σ ++ " → " ++ show τ
 
