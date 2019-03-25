@@ -62,8 +62,7 @@ module _ where
     let lets       = toLets defs (toCheck eval)
     let unlets     = let-inline lets
     let val        = norm unlets
-    m              ← getMap
-    let rm         = Map.invert m
+    rm             ← Map.invert <$> getMap
     pure $ print lets rm
          , print unlets rm
          , print val rm
