@@ -283,9 +283,11 @@ toLets (ds & d) e = toLets ds $ Definition.pos d
                               >`let toInfer (Definition.term d)
                               `in e
 
-infix 9 assuming_have_
+infix 9 _&&_
 data Program : Set where
-  assuming_have_ : ∀ {σ Γ} → Definitions Γ → Expression σ Γ → Program
+  _&&_ : ∀ {σ Γ} → Definitions Γ → Expression σ Γ → Program
+
+pattern assuming_have_ defs expr = defs && expr
 
 {-
 -- Can't quite write this: we would have to also write down the position of each node

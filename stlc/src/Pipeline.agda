@@ -42,9 +42,9 @@ module _ where
     let x = r > str ∶ σ ≔ subst (Internal.Typed _) (eq^fromTyping _) typed
     declarations decls (p & x)
 
-  declaration : Parsed Infer → ∀ {Γ} → Definitions Γ →
+  declaration : ∀ {Γ} → Definitions Γ → Parsed Infer →
                 Compiler String (∃ λ σ → Expression σ Γ)
-  declaration d {Γ} p = do
+  declaration {Γ} p d = do
     scoped      ← scopecheck p d
     (σ , typed) ← ppCompiler $ liftResult $ type- Infer Γ scoped (map⁺ self)
     pure (σ , subst (Internal.Typed _) (eq^fromTyping _) typed)
@@ -53,19 +53,17 @@ module _ where
   toProgram str = do
     (decls , expr) ← liftResult $ parse str
     (Γ , defs)     ← declarations (List⁺.toList decls) []
-    (σ , eval)     ← declaration expr defs
+    (σ , eval)     ← declaration defs expr
     pure $ assuming defs have eval
 
   pipeline : String → Error String ⊎ (String × String × String)
   pipeline str = Compiler.run $ do
-    (decls , expr) ← liftResult $ parse str
-    (Γ , defs)     ← declarations (List⁺.toList decls) []
-    (σ , eval)     ← declaration expr defs
-    let lets   = toLets defs (toCheck eval)
-    let unlets = let-inline lets
-    let val    = norm unlets
-    m ← getMap
-    let rm = Map.invert m
+    (defs && eval) ← toProgram str
+    let lets       = toLets defs (toCheck eval)
+    let unlets     = let-inline lets
+    let val        = norm unlets
+    m              ← getMap
+    let rm         = Map.invert m
     pure $ print lets rm
          , print unlets rm
          , print val rm
