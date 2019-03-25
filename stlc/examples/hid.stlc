@@ -1,0 +1,4 @@
+def idh : ('a → 'a) → ('a → 'a) = λf.λx. f x
+def id : ('a → 'a) = λx.x
+have idh id
+

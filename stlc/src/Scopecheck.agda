@@ -44,12 +44,12 @@ module _ where
 
   cleanupTerm : ∀ {i σ Γ} → Tm (surface String) i σ Γ → M (Scoped σ Γ)
   cleanupTerm (`var k)          = return $ `var k
-  cleanupTerm (r > t `∶ σ)      = r >_`∶_ <$> cleanupTerm t ⊛ cleanupType σ
-  cleanupTerm (r > f `$ t)      = r >_`$_ <$> cleanupTerm f ⊛ cleanupTerm t
+  cleanupTerm (r >[ t `∶ σ ])   = r >[_`∶_] <$> cleanupTerm t ⊛ cleanupType σ
+  cleanupTerm (r >[ f `$ t ])   = r >[_`$_] <$> cleanupTerm f ⊛ cleanupTerm t
   cleanupTerm (r >`fst b)       = r >`fst_  <$> cleanupTerm b
   cleanupTerm (r >`snd b)       = r >`snd_  <$> cleanupTerm b
   cleanupTerm (r >`λ b)         = r >`λ_  <$> cleanupTerm b
-  cleanupTerm (r > a `, b)      = r >_`,_ <$> cleanupTerm a ⊛ cleanupTerm b
+  cleanupTerm (r >[ a `, b ])   = r >[_`,_] <$> cleanupTerm a ⊛ cleanupTerm b
   cleanupTerm (r >`let e `in b) = r >`let_`in_ <$> cleanupTerm e ⊛ cleanupTerm b
   cleanupTerm (r >`- t)         = r >`-_  <$> cleanupTerm t
 

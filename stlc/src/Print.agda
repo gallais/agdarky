@@ -19,7 +19,8 @@ open import Language
 open Internal
 
 import Data.Map as M
-module Map = M.Map Nat._≟_ String
+private
+  module Map = M.Map Nat._≟_ String
 open Map using (Map)
 
 type : Type ℕ → Map → String

@@ -1,0 +1,77 @@
+\documentclass{beamer}
+\begin{document}
+
+\author{Guillaume ALLAIS}
+\title{Scrap Your DSL Boilerplate\\
+With a Universe of Syntaxes With Binding}
+\institute{CoCoDo 2019}
+\date{April 2nd, 2019}
+
+\begin{frame}
+\maketitle
+\end{frame}
+
+\begin{frame}{Quick Presentation}
+\begin{itemize}
+  \item Background in Interactive Theorem Provers
+  \item (User and) Developer of Agda and its standard library
+    \begin{itemize}
+      \item \url{https://github.com/agda/agda}
+      \item \url{https://github.com/agda/agda-stdlib}
+    \end{itemize}
+  \item Excited about running correct by construction code
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Background of this Work}
+
+\begin{itemize}
+  \item Theoretic: DSLs with Strong invariants
+    \uncover<2->
+    {
+    \begin{itemize}
+      \item Universe of Syntaxes with Binding
+      \item Type and Scope Preserving Programs and their Proofs
+      \item Not in: Resource-Aware Type Systems (Linear Logic)
+    \end{itemize}
+    }
+  \medskip
+  \item Practical: User Interactions
+    \uncover<3->
+    {
+    \begin{itemize}
+      \item Total Parser Combinators
+      \item Not in (yet): Declarative Hierarchical Command Line Interfaces
+      \item Not in (yet): Sized IO
+    \end{itemize}
+    }
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Intro to Agda}
+Agda is:
+\begin{itemize}
+  \item pure
+  \item functional
+  \item dependently typed
+%    \uncover<2->
+%    {
+%    \begin{itemize}
+%      \item Types can depend upon Types (stlc: not just ground types)
+%      \item Terms can depend upon Types (parametric polymorphism)
+%      \item Types can depend upon Terms (TT)
+%    \end{itemize}
+%    }
+  \item total
+%    \uncover<10->
+%    {
+%    \begin{itemize}
+%      \item evaluation terminates
+%      \item user demands of "observations" are answered
+%    \end{itemize}
+%    }
+\end{itemize}
+
+\end{frame}
+
+\end{document}

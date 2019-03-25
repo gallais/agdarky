@@ -101,12 +101,12 @@ Typecheck : Sem (surface ℕ) Var- Type-
 Sem.th^𝓥 Typecheck = th^Var-
 Sem.var   Typecheck = λ where (`var infer) γ → pure $ map₂ `var (infer γ)
 Sem.alg   Typecheck = λ where
-  (r > t `∶' σ) γ → (-,_ ∘ (r >_`∶ σ)) <$> t γ σ
-  (r > f `$' t) γ → do
+  (r >[ t `∶' σ ]) γ → (-,_ ∘ (r >[_`∶ σ ])) <$> t γ σ
+  (r >[ f `$' t ]) γ → do
     (σ⇒τ , f′)       ← f γ
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     t′               ← t γ σ
-    pure $ -, r > f′ `$ t′
+    pure $ -, r >[ f′ `$ t′ ]
   (r >`fst' e) γ → do
     (σ⊗τ , e′)       ← e γ
     ((σ , τ) , refl) ← fromMaybe (At r NotAProduct σ⊗τ) (isProduct σ⊗τ)
@@ -119,11 +119,11 @@ Sem.alg   Typecheck = λ where
     ((σ , τ) , refl) ← fromMaybe (At r NotAnArrow σ⇒τ) (isArrow σ⇒τ)
     b′               ← b extend (ε ∙ var0) (σ ∷ γ) τ
     pure $ r >`λ b′
-  (r > a `,' b) Γ σ⊗τ → do
+  (r >[ a `,' b ]) Γ σ⊗τ → do
     ((σ , τ) , refl) ← fromMaybe (At r NotAProduct σ⊗τ) (isProduct σ⊗τ)
     a′               ← a Γ σ
     b′               ← b Γ τ
-    pure $ r > a′ `, b′
+    pure $ r >[ a′ `, b′ ]
   (r >`let' e `in b) γ τ → do
     (σ , e′) ← e γ
     b′       ← b extend (ε ∙ var0) (σ ∷ γ) τ

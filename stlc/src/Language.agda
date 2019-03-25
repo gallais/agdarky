@@ -16,8 +16,10 @@ open import Relation.Binary using (Decidable)
 open import Relation.Binary.PropositionalEquality
 
 open import var using (z; s; _─Scoped)
+open import environment
 open import Generic.Syntax
 open import Generic.AltSyntax
+open import Generic.Semantics.Syntactic using (sub)
 open import Text.Parser.Position as Position using (Position; _∶_; start)
 
 infixr 6 _⇒_
@@ -136,9 +138,12 @@ module Internal where
     Let → `σ (Type ℕ × Type ℕ) $ uncurry $ λ σ τ →
           `X [] (Infer , σ) (`X ((Infer , σ) ∷ []) (Check , τ) (`∎ (Check , τ)))
 
-
   Internal : (P : Set) → (Mode × Type ℕ) ─Scoped
   Internal P = Tm (internal P) _
+
+  getPosition : ∀ {P σ Γ} → Internal P σ Γ → Position
+  getPosition (`var _)       = start
+  getPosition (`con (r , _)) = r
 
   typed = internal ⊤
 
@@ -195,18 +200,18 @@ pattern `-'_        t   = (Emb , _ , t , refl)
 pattern `-_         t   = `con (_ , `-' t)
 
 -- Position-aware pattern synonyms (usable both on the LHS and RHS)
-pattern _>_`∶'_      r t σ = (r , Cut , σ , t , refl)
-pattern _>_`∶_       r t σ = `con (r > t `∶' σ)
-pattern _>_`$'_      r f t = (r , App , _ , f , t , refl)
-pattern _>_`$_       r f t = `con (r > f `$' t)
+pattern _>[_`∶'_]    r t σ = (r , Cut , σ , t , refl)
+pattern _>[_`∶_]     r t σ = `con (r >[ t `∶' σ ])
+pattern _>[_`$'_]    r f t = (r , App , _ , f , t , refl)
+pattern _>[_`$_]     r f t = `con (r >[ f `$' t ])
 pattern _>`fst'_     r e   = (r , Fst , _ , e , refl)
 pattern _>`fst_      r e   = `con (r >`fst' e)
 pattern _>`snd'_     r e   = (r , Snd , _ , e , refl)
 pattern _>`snd_      r e   = `con (r >`snd' e)
 pattern _>`λ'_       r b   = (r , Lam , _ , b , refl)
 pattern _>`λ_        r b   = `con (r >`λ' b)
-pattern _>_`,'_      r a b = (r , Prd , _ , a , b , refl)
-pattern _>_`,_       r a b  = `con (r > a `,' b)
+pattern _>[_`,'_]    r a b = (r , Prd , _ , a , b , refl)
+pattern _>[_`,_]     r a b  = `con (r >[ a `,' b ])
 pattern _>`let'_`in_ r e b = (r , Let , _ , e , b , refl)
 pattern _>`let_`in_  r e b = `con (r >`let' e `in b)
 pattern _>`-'_       r t   = (r , Emb , _ , t , refl)
@@ -226,16 +231,29 @@ _ = start >`λ (start >`- `var z)
 _ : ∀ {σ} → Internal.Typed (Check , σ ⇒ σ) []
 _ = start >`λ (start >`- `var z)
 
+toCheck : ∀ {m σ Γ} → Internal.Typed (m , σ) Γ → Internal.Typed (Check , σ) Γ
+toCheck {Infer} t = Internal.getPosition t >`- t
+toCheck {Check} t = t
+
+toInfer : ∀ {m σ Γ} → Internal.Typed (m , σ) Γ → Internal.Typed (Infer , σ) Γ
+toInfer {Infer} t = t
+toInfer {Check} t = Internal.getPosition t >[ t `∶ _ ]
+
+infersOf : List (Type ℕ) → List (Mode × Type ℕ)
+infersOf = List.map (Infer ,_)
 
 data Definitions : List (Type ℕ) → Set
 record Definition {ds} (p : Definitions ds) : Set
 
-infixl 11 _∶_≔_
+infixl 11 _>_∶_≔_ _∶_≔_
 record Definition {ds} p where
-  constructor _∶_≔_
-  field name : String
+  constructor _>_∶_≔_
+  field pos  : Position
+        name : String
         type : Type ℕ
-        term : Internal.Typed (Check , type) (List.map (Infer ,_) ds)
+        term : Internal.Typed (Check , type) (infersOf ds)
+
+pattern _∶_≔_ x σ t = _ > x ∶ σ ≔ t
 
 infixl 10 _&_
 data Definitions where
@@ -249,6 +267,10 @@ modes {Γ} _ = List.map (const Infer) Γ
 names : ∀ {Γ} (ds : Definitions Γ) → All (const String) (modes ds)
 names []       = []
 names (ds & d) = Definition.name d ∷ names ds
+
+toEnv : ∀ {Γ} → Definitions Γ → (infersOf Γ ─Env) Internal.Typed []
+toEnv []                  = ε
+toEnv (Γ & r > _ ∶ σ ≔ d) = let ρ = toEnv Γ in ρ ∙ sub ρ (r >[ d `∶ σ ])
 
 Expression : Type ℕ ─Scoped
 Expression σ Γ = Internal.Typed (Infer , σ) (List.map (Infer ,_) Γ)

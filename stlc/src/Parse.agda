@@ -49,7 +49,7 @@ open ParserM
 data Tok : Set where
   ID                : String → Tok
   ARR PRD           : Tok
-  DEF EVL           : Tok
+  DEF HVE           : Tok
   LET EQ IN         : Tok
   LAM DOT           : Tok
   FST SND           : Tok
@@ -60,7 +60,7 @@ ID x ≟ ID y = map′ (cong ID) (λ where refl → refl) (x String.≟ y)
 ARR  ≟ ARR  = yes refl
 PRD  ≟ PRD  = yes refl
 DEF  ≟ DEF  = yes refl
-EVL  ≟ EVL  = yes refl
+HVE  ≟ HVE  = yes refl
 LET  ≟ LET  = yes refl
 EQ   ≟ EQ   = yes refl
 IN   ≟ IN   = yes refl
@@ -89,7 +89,7 @@ keywords = ("→"   , ARR)
          ∷ ("fst" , FST)
          ∷ ("snd" , SND)
          ∷ ("def" , DEF)
-         ∷ ("eval", EVL)
+         ∷ ("have", HVE)
          ∷ []
 
 breaking : Char → ∃ λ b → if b then Maybe Tok else Lift _ ⊤
@@ -140,11 +140,11 @@ bidirectional = fix Bidirectional $ λ rec →
   let □check = INS.map check rec
       □infer = INS.map infer rec
       var    = uncurry (flip `var) <$> (guard (List.all isAlpha ∘′ toList) name <&M> getPosition)
-      cut    = (λ where ((t , (p , _)) , σ) → p > t `∶ σ)
+      cut    = (λ where ((t , (p , _)) , σ) → p >[ t `∶ σ ])
                <$> (theTok LPAR
                 &> □check <&> box (theTok COL) <&> box (commit type)
                <& box (theTok RPAR))
-      app    = (λ where (p , c) e → p > e `$ c) <$>
+      app    = (λ where (p , c) e → p >[ e `$ c ]) <$>
                 (getPosition <M&> ((uncurry _>`-_ <$> (getPosition <M&> var))
                               <|> parens □check))
 
@@ -162,7 +162,7 @@ bidirectional = fix Bidirectional $ λ rec →
                <&> box (theTok IN &> INS.map commit □check)
                )
 
-      paredc = (λ p → let (c , r) = p; cons c = uncurry (_> c `,_) in
+      paredc = (λ p → let (c , r) = p; cons c = uncurry (_>[ c `,_]) in
                   [ cons c ∘′ List⁺.foldr₁ (λ where (p , c) → (p ,_) ∘′ cons c)
                   , const c ]′ r) <$>
               -- opening parenthesis
@@ -180,19 +180,21 @@ bidirectional = fix Bidirectional $ λ rec →
             ; check = check <|> paredc
             }
 
-definitions : ∀[ Parser P (List⁺ (String × Type String × Parsed Check)) ]
-definitions = list⁺ $ theTok DEF
-                  &> box (name
+definitions : ∀[ Parser P (List⁺ (Position × String × Type String × Parsed Check)) ]
+definitions = list⁺ $ getPosition
+                <M&  theTok DEF
+                 <&> box (name
                  <&> box (theTok COL
                   &> box (type
                  <&> box (theTok EQ
                   &> box (check bidirectional)))))
 
-program : ∀[ Parser P (List⁺ (String × Type String × Parsed Check) × Parsed Infer) ]
-program = definitions <&> box (theTok EVL &> box (infer bidirectional))
+program : ∀[ Parser P (List⁺ (Position × String × Type String × Parsed Check)
+                      × Parsed Infer) ]
+program = definitions <&> box (theTok HVE &> box (infer bidirectional))
 
 parse : String → Types.Result String
-        (List⁺ (String × Type String × Parsed Check) × Parsed Infer)
+        (List⁺ (Position × String × Type String × Parsed Check) × Parsed Infer)
 parse str = result inj₁ inj₁ (inj₂ ∘′ Success.value ∘′ proj₁)
           $′ runParser program ≤-refl input (start , [])
   where input = Vec.fromList $ tokenize str
@@ -215,17 +217,17 @@ _ = refl
 
 _ : parse "def  ida : 'a → 'a = λ x . x
 \         \def  idb : 'a → 'a = λ y . ida y
-\         \eval idb"
-  ≡ (inj₂ ((("ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
-           ∷ ("idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))
-           ∷ []
+\         \have idb"
+  ≡ (inj₂ (((start , "ida" , _ , `λ "x" ↦ (`- `var (0 ∶ 27) "x"))
+          ∷ (record { line = 0 ; offset = 27 } , "idb" , _ , `λ "y" ↦ `- (`var _ "ida" `$ (`- `var (1 ∶ 31) "y")))
+          ∷ []
            ) , `var (2 ∶ 5) "idb"
     ))
 _ = refl
 
 _ : parse "def  thd : ('a * 'b * 'c) -> 'c = λ p. fst (fst p)
-\         \eval thd"
-  ≡ inj₂ ((("thd" , (α "a" ⊗ (α "b" ⊗ α "c")) ⇒ α "c"
+\         \have thd"
+  ≡ inj₂ (((start , "thd" , (α "a" ⊗ (α "b" ⊗ α "c")) ⇒ α "c"
            , `λ "p" ↦ `- `fst `fst `var (0 ∶ 48) "p"
            )
            ∷ []
@@ -235,8 +237,8 @@ _ : parse "def  thd : ('a * 'b * 'c) -> 'c = λ p. fst (fst p)
 _ = refl
 
 _ : parse "def swap : ('a * 'b) → ('b * 'a) = λp. (snd p, fst p, snd p)
-\         \eval swap"
-  ≡ inj₂ (("swap" , (α "a" ⊗ α "b") ⇒ (α "b" ⊗ α "a")
+\         \have swap"
+  ≡ inj₂ ((start , "swap" , (α "a" ⊗ α "b") ⇒ (α "b" ⊗ α "a")
           , (0 ∶ 35) >`λ "p" ↦ ((`- `snd `var (0 ∶ 44) "p")
                              `, ((`- `fst `var (0 ∶ 51) "p")
                              `, (`- `snd `var (0 ∶ 58) "p")))

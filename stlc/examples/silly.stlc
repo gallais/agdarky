@@ -1,4 +1,4 @@
 def id  : 'a -> 'a       = \x. x
 def un : 'a -> 'b -> 'a = \x.\y.id (let y = x in y)
 def deux : 'a -> 'b -> 'b = \x. \y .y
-eval un
+have un

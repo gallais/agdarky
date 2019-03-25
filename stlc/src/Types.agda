@@ -60,7 +60,8 @@ module Result where
 -- So instead I'm using a quick and dirty representation
 import Data.Map as M
 
-module RMap = M.Map ℕ._≟_ String
+private
+  module RMap = M.Map ℕ._≟_ String
 module Map  = M.Map String._≟_ ℕ
 open Map using (Map; RMap) public
 
@@ -77,6 +78,9 @@ module Compiler where
 
   liftState : ∀ {E A} → State (Map × ℕ) A → Compiler E A
   liftState = let open RawMonad (StateMonad _) in inj₂ <$>_
+
+  getMap : ∀ {E} → Compiler E Map
+  getMap = liftState $ λ where s@(mp , n) → (mp , s)
 
   fail : ∀ {E A} → Error E → Compiler E A
   fail = liftResult ∘′ Result.fail

@@ -10,9 +10,10 @@ open import Codata.Musical.Notation
 
 import Types
 open import Pipeline
+open import Print
 
 main = run $
   ♯ getArgs >>= λ where
     []       → ♯ (return _)
     (fp ∷ _) → ♯ (♯ readFiniteFile fp >>= λ str →
-                  ♯ putStrLn ([ Types.show , const "success" ]′ (pipeline str)))
+                  ♯ putStrLn ([ Types.show , id ]′ (pipeline str)))

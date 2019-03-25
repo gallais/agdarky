@@ -12,51 +12,74 @@ open import Function
 open import Relation.Binary.PropositionalEquality
 
 open import var using (z; s)
+import environment as E
 open import Generic.Syntax using (`var)
+open import Generic.Semantics.Syntactic using (sub)
 open import Language; open Surface
 open import Types
 open import Parse
 open import Scopecheck
 open import Typecheck
 open import LetInline
+open import Eval
 open import Print
 
 open import Category.Monad
 
-open RawMonad (Compiler.monad String)
 open Compiler
 
-declarations : List (String × Type String × Parsed Check) →
-               ∀ {Γ} → Definitions Γ → Compiler String (∃ Definitions)
-declarations []             p = pure $ -, p
-declarations ((str , sig , decl) ∷ decls) p = do
-  scoped ← scopecheck p decl
-  σ      ← liftState $ cleanupType sig
-  typed  ← ppCompiler $ liftResult $ type- Check _ scoped (map⁺ self) σ
-  let x = str ∶ σ ≔ subst (Internal.Typed _) (eq^fromTyping _) typed
-  declarations decls (p & x)
+module _ where
 
-declaration : Parsed Infer → ∀ {Γ} → Definitions Γ →
-              Compiler String (∃ λ σ → Expression σ Γ)
-declaration d {Γ} p = do
-  scoped      ← scopecheck p d
-  (σ , typed) ← ppCompiler $ liftResult $ type- Infer Γ scoped (map⁺ self)
-  pure (σ , subst (Internal.Typed _) (eq^fromTyping _) typed)
+  open RawMonad (Compiler.monad String)
 
-pipeline : String → Error String ⊎ Program
-pipeline str = Compiler.run $ do
-  (decls , expr) ← liftResult $ parse str
-  (Γ , defs)     ← declarations (List⁺.toList decls) []
-  (σ , eval)     ← declaration expr defs
-  pure $ assuming defs have eval
+  declarations : List (Position × String × Type String × Parsed Check) →
+                 ∀ {Γ} → Definitions Γ → Compiler String (∃ Definitions)
+  declarations []                               p = pure $ -, p
+  declarations ((r , str , sig , decl) ∷ decls) p = do
+    scoped ← scopecheck p decl
+    σ      ← liftState $ cleanupType sig
+    typed  ← ppCompiler $ liftResult $ type- Check _ scoped (map⁺ self) σ
+    let x = r > str ∶ σ ≔ subst (Internal.Typed _) (eq^fromTyping _) typed
+    declarations decls (p & x)
+
+  declaration : Parsed Infer → ∀ {Γ} → Definitions Γ →
+                Compiler String (∃ λ σ → Expression σ Γ)
+  declaration d {Γ} p = do
+    scoped      ← scopecheck p d
+    (σ , typed) ← ppCompiler $ liftResult $ type- Infer Γ scoped (map⁺ self)
+    pure (σ , subst (Internal.Typed _) (eq^fromTyping _) typed)
+
+  toProgram : String → Compiler String Program
+  toProgram str = do
+    (decls , expr) ← liftResult $ parse str
+    (Γ , defs)     ← declarations (List⁺.toList decls) []
+    (σ , eval)     ← declaration expr defs
+    pure $ assuming defs have eval
+
+  pipeline : String → Error String ⊎ String
+  pipeline str = Compiler.run $ do
+    (decls , expr) ← liftResult $ parse str
+    (Γ , defs)     ← declarations (List⁺.toList decls) []
+    (σ , eval)     ← declaration expr defs
+    let val = norm (sub (toEnv defs) eval)
+    m ← getMap
+    pure $ print val (Map.invert m)
 
 open import Agda.Builtin.Equality
 
-_ : from-inj₂ (pipeline "def id  : 'a → 'a = λx. x
+_ : Compiler.run (toProgram "def id  : 'a → 'a = λx. x
 \            \def deux : 'a → 'b → 'b = λx. λy.y
-\            \eval id")
-  ≡ assuming []
+\            \have id")
+  ≡ inj₂ (assuming []
   & "id"   ∶ α 0 ⇒ α 0       ≔ `λ `- `var z
   & "deux" ∶ α 0 ⇒ α 1 ⇒ α 1 ≔ `λ `λ `- `var z
-  have `var (s z)
+  have `var (s z))
+_ = refl
+
+-- normalisation test
+
+_ : pipeline "def idh : ('a → 'a) → ('a → 'a) = λf.λx. f x
+\            \def id : ('a → 'a) = λx.x
+\            \have idh id"
+  ≡ inj₂ "λa.a"
 _ = refl

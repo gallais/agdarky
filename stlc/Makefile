@@ -8,3 +8,4 @@ executable:
 tests:
 	./Main examples/silly.stlc
 	./Main examples/swap2.stlc
+	./Main examples/hid.stlc
