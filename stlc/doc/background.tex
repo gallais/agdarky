@@ -52,24 +52,21 @@ With a Universe of Syntaxes With Binding}
 Agda is:
 \begin{itemize}
   \item pure
+    \begin{itemize}
+      \item No undocumented side effects
+      \item No undocumented mutations
+      \uncover<2->{\item No undocumented non-termination}
+    \end{itemize}
   \item functional
+    \begin{itemize}
+      \item first class functions
+      \item powerful notion of inductive family (GADTs++)
+    \end{itemize}
   \item dependently typed
-%    \uncover<2->
-%    {
-%    \begin{itemize}
-%      \item Types can depend upon Types (stlc: not just ground types)
-%      \item Terms can depend upon Types (parametric polymorphism)
-%      \item Types can depend upon Terms (TT)
-%    \end{itemize}
-%    }
-  \item total
-%    \uncover<10->
-%    {
-%    \begin{itemize}
-%      \item evaluation terminates
-%      \item user demands of "observations" are answered
-%    \end{itemize}
-%    }
+    \begin{itemize}
+      \item Types can (mention / be) arbitrary terms
+    \end{itemize}
+  \item<1> total
 \end{itemize}
 
 \end{frame}
