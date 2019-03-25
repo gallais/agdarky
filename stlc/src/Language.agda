@@ -273,7 +273,15 @@ toEnv []                  = ε
 toEnv (Γ & r > _ ∶ σ ≔ d) = let ρ = toEnv Γ in ρ ∙ sub ρ (r >[ d `∶ σ ])
 
 Expression : Type ℕ ─Scoped
-Expression σ Γ = Internal.Typed (Infer , σ) (List.map (Infer ,_) Γ)
+Expression σ Γ = Internal.Typed (Infer , σ) (infersOf Γ)
+
+
+toLets : ∀ {σ Γ} → Definitions Γ →
+         Internal.Typed (Check , σ) (infersOf Γ) → Internal.Typed (Check , σ) []
+toLets []       e = e
+toLets (ds & d) e = toLets ds $ Definition.pos d
+                              >`let toInfer (Definition.term d)
+                              `in e
 
 infix 9 assuming_have_
 data Program : Set where

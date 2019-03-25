@@ -26,7 +26,7 @@ th^Model' {α k}   (r , t)     ρ = r , th^Tm t ρ
 th^Model' {σ ⇒ τ} (r , f)     ρ = r , th^□ f ρ
 th^Model' {σ ⊗ τ} (r , a , b) ρ = r , th^Model' a ρ , th^Model' b ρ
 
-Eval : Sem typed Model Model
+Eval : ∀ {P} → Sem (internal P) Model Model
 Sem.th^𝓥 Eval = th^Model'
 Sem.var  Eval = id
 Sem.alg  Eval = λ where
@@ -50,5 +50,5 @@ reflect (α k)   r t = r , t
 reflect (σ ⊗ τ) r t = r , reflect σ r (r >`fst t) , reflect τ r (r >`snd t)
 reflect (σ ⇒ τ) r t = r , λ inc v → reflect τ r (r >[ th^Tm t inc `$ reify σ v ])
 
-norm : ∀ {m σ} → Typed (m , σ) [] → Typed (Check , σ) []
+norm : ∀ {P m σ} → Internal P (m , σ) [] → Typed (Check , σ) []
 norm = reify _ ∘′ Sem.closed Eval

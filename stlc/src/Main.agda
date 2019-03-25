@@ -1,7 +1,9 @@
 module Main where
 
-open import Data.List.Base
+open import Data.List.Base using ([]; _∷_)
 open import Data.Sum.Base
+open import Data.Product
+open import Data.String.Base
 open import Function
 
 open import System.Environment
@@ -16,4 +18,6 @@ main = run $
   ♯ getArgs >>= λ where
     []       → ♯ (return _)
     (fp ∷ _) → ♯ (♯ readFiniteFile fp >>= λ str →
-                  ♯ putStrLn ([ Types.show , id ]′ (pipeline str)))
+                  ♯ putStrLn ([ Types.show , unlines3 ]′ (pipeline str)))
+
+  where unlines3 = λ where (a , b , c) → a ++ "\n" ++ b ++ "\n" ++ c

@@ -56,14 +56,19 @@ module _ where
     (σ , eval)     ← declaration expr defs
     pure $ assuming defs have eval
 
-  pipeline : String → Error String ⊎ String
+  pipeline : String → Error String ⊎ (String × String × String)
   pipeline str = Compiler.run $ do
     (decls , expr) ← liftResult $ parse str
     (Γ , defs)     ← declarations (List⁺.toList decls) []
     (σ , eval)     ← declaration expr defs
-    let val = norm (sub (toEnv defs) eval)
+    let lets   = toLets defs (toCheck eval)
+    let unlets = let-inline lets
+    let val    = norm unlets
     m ← getMap
-    pure $ print val (Map.invert m)
+    let rm = Map.invert m
+    pure $ print lets rm
+         , print unlets rm
+         , print val rm
 
 open import Agda.Builtin.Equality
 
@@ -81,5 +86,9 @@ _ = refl
 _ : pipeline "def idh : ('a → 'a) → ('a → 'a) = λf.λx. f x
 \            \def id : ('a → 'a) = λx.x
 \            \have idh id"
-  ≡ inj₂ "λa.a"
+  ≡ inj₂ ("let c = (λa.λb.a b : (`a → `a) → `a → `a) in \
+          \let e = (λd.d : `a → `a) in \
+          \c e"
+         , "(λa.λb.a b : (`a → `a) → `a → `a) (λc.c : `a → `a)"
+         , "λa.a")
 _ = refl
