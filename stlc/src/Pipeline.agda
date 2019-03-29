@@ -5,8 +5,9 @@ open import Data.String
 open import Data.Sum
 open import Data.List.Base as List
 import Data.List.NonEmpty as List⁺
-open import Data.List.Relation.Unary.All
-open import Data.List.Relation.Unary.All.Properties
+open import Data.List.All
+open import Data.List.All.Properties
+open import Data.List.Relation.Unary.All.Extras as Allₑ
 open import Text.Parser.Position
 open import Function
 open import Relation.Binary.PropositionalEquality
@@ -38,7 +39,7 @@ module _ where
   declarations ((r , str , sig , decl) ∷ decls) p = do
     scoped ← scopecheck p decl
     σ      ← liftState $ cleanupType sig
-    typed  ← ppCompiler $ liftResult $ type- Check _ scoped (map⁺ self) σ
+    typed  ← ppCompiler $ liftResult $ type- Check _ scoped (map⁺ Allₑ.self) σ
     let x = r > str ∶ σ ≔ subst (Internal.Typed _) (eq^fromTyping _) typed
     declarations decls (p & x)
 

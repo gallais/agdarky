@@ -7,8 +7,8 @@ open import Data.String.Unsafe as String
 open import Data.Maybe.Base using (Maybe; nothing; just; maybe′)
 open import Data.Sum.Base as Sum using (inj₁; inj₂; [_,_]′)
 open import Data.List as List using ([])
-open import Data.List.Relation.Unary.All as All using (All)
-open import Data.List.Relation.Unary.All.Properties
+open import Data.List.All as All using (All)
+open import Data.List.All.Properties
 open import Function
 
 open import Category.Monad

@@ -3,12 +3,13 @@ module Typecheck where
 open import Data.Product as Prod
 open import Data.Nat as ℕ using (ℕ; _≟_)
 open import Data.List as List hiding (lookup ; fromMaybe)
-open import Data.List.Relation.Unary.All as All hiding (lookup)
-import Data.List.Relation.Unary.All.Properties as Allₚ
-open import Data.List.Relation.Unary.Any using (here; there)
+open import Data.List.All as All hiding (lookup)
+import Data.List.All.Properties as Allₚ
+open import Data.List.Relation.Unary.All.Extras as Allₑ
+open import Data.List.Any using (here; there)
 open import Data.List.Membership.Propositional
 open import Relation.Binary.PropositionalEquality as P using (_≡_; refl)
-open import Data.Maybe hiding (fromMaybe)
+open import Data.Maybe hiding (fromMaybe; All)
 open import Function
 
 open import Category.Monad
@@ -30,10 +31,10 @@ Typing : List Mode → Set
 Typing = All (const (Type ℕ))
 
 fromTyping : ∀ ms → Typing ms → List (Mode × Type ℕ)
-fromTyping ms = toList
+fromTyping ms = Allₑ.toList
 
 eq^fromTyping :
-  ∀ Γ → fromTyping (List.map (const Infer) Γ) (Allₚ.map⁺ All.self)
+  ∀ Γ → fromTyping (List.map (const Infer) Γ) (Allₚ.map⁺ Allₑ.self)
       ≡ List.map (Infer ,_) Γ
 eq^fromTyping []      = refl
 eq^fromTyping (σ ∷ Γ) = P.cong (_ ∷_) (eq^fromTyping Γ)

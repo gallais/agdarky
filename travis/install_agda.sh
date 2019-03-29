@@ -11,17 +11,11 @@ mkdir -p $HOME/.agda
 cp libraries-"$AGDA_VERSION" $HOME/.agda/
 cd $HOME/.agda/
 # install stdlib
-git clone https://github.com/agda/agda-stdlib/ agda-stdlib-0.18
-cd agda-stdlib-0.18
-git checkout all-self
-cd ..
-# install generic-syntax
-git clone https://github.com/gallais/generic-syntax
-cd generic-syntax
-git checkout 2a2dc29f7ef082a72e59e6be84db3c8e06cdc4e2
-cd ..
+wget https://github.com/agda/agda-stdlib/archive/v0.17.tar.gz
+tar -xvzf v0.17.tar.gz
 # install agdarsec
-git clone https://github.com/gallais/agdarsec
-cd agdarsec
-git checkout 9c3b216e84a36f551a8a6c496c4c2371a011a0c0
-cd ..
+wget https://github.com/gallais/agdarsec/archive/v0.3.0.tar.gz
+tar -xvzf v0.3.0.tar.gz
+# install generic-syntax
+wget https://github.com/gallais/generic-syntax/archive/v0.2.tar.gz
+tar -xvzf v0.2.tar.gz

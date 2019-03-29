@@ -5,7 +5,7 @@ open import Data.Empty
 open import Data.Product as Prod
 open import Data.Nat
 open import Data.List as List using (List; []; _∷_)
-open import Data.List.Relation.Unary.All -- important for the pattern synonyms!
+open import Data.List.All -- important for the pattern synonyms!
 open import Data.String as String using (String; _++_)
 open import Function
 open import Function.Equivalence
