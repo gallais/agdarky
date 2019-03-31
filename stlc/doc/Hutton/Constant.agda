@@ -58,7 +58,31 @@ Sem.alg   Eval = λ where
 eval : TM hutton _ → ℕ
 eval = Sem.closed Eval
 
+-- 5 + 5 ≡ 10
+
 _ : eval (add five five) ≡ 10
+_ = refl
+
+open import Generic.Semantics.Syntactic
+
+Fold : Sem hutton (Tm hutton _) (Tm hutton _)
+Sem.th^𝓥 Fold = th^Tm
+Sem.var   Fold = λ t → t
+Sem.alg   Fold = λ where
+  (add' (lit 0) t)       → t
+  (add' t (lit 0))       → t
+  (add' (lit m) (lit n)) → lit (m + n)
+  (add' t u)             → add t u
+  (lit' n)               → lit n
+
+fold : ∀ n → let Γ = List.replicate n _ in Tm hutton _ _ Γ → Tm hutton _ _ Γ
+fold n = Sem.sem Fold (pack `var)
+
+-- (0 + (x₂ + 0)) + (3 + 4) ≡ x₂ + 7
+
+_ : fold 3 (add (add (lit 0) (add (`var (s (s z))) (lit 0)))
+                (add (lit 3) (lit 4)))
+  ≡ add (`var (s (s z))) (lit 7)
 _ = refl
 
 record Essence (_ : ⊤) (Γ : List ⊤) : Set where
@@ -77,6 +101,8 @@ simplify : ∀ n → let Γ = List.replicate n _ in Tm hutton _ _ Γ → Tm hutt
 simplify Γ t = let (n :+ xs) = Sem.sem Simpl (pack (λ v → 0 :+ (v ∷ []))) t in
                List.foldl (λ t v → add t (`var v)) (lit n) xs
 
+
+-- (3 + (x₀ + x₁)) + (x₂ + (2 + 12)) ≡ 15 + x₀ + x₁ + x₂
 
 _ : simplify 3 (add (add (lit 3) (add (`var z) (`var (s z))))
                     (add (`var (s (s z))) (add (lit 2) (lit 10))))
