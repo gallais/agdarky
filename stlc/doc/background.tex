@@ -1,7 +1,7 @@
 \documentclass{beamer}
-\newcommand{\codehere}{
+\newcommand{\codehere}[1]{
 \begin{center}
-{\large[Some code here]}
+{\large[#1.agda]}
 \end{center}
 }
 
@@ -82,20 +82,22 @@ Agda is:
 \end{frame}
 
 \begin{frame}{Intro to Agda: Interactive Programming}
-\codehere
+\codehere{Gentle}
 \end{frame}
 
 \begin{frame}{Warming up: Hutton's Razor(s)}
-\codehere
+\codehere{Hutton/(Base$|$Constant)}
 \end{frame}
 
 \begin{frame}{Generic Pass: Let-inlining}
-\codehere
+\codehere{Generic/Semantics/Elaboration/LetBinder}
 \end{frame}
 
 \begin{frame}{Generic Pass: Let-inlining, II}
 \begin{itemize}
   \item Either: IR with usage counting for variables
+    \codehere{Generic/Semantics/Elaboration/LetCounter}
+
   \item Or: Different IR with usage information ("co-deBruijn")
 \end{itemize}
 \end{frame}
@@ -116,6 +118,8 @@ Agda is:
     \begin{itemize}
       \item Type-and-scope safe programs and their proofs (\url{https://dl.acm.org/citation.cfm?id=3018613})
       \item A type and scope safe universe of syntaxes with binding: their semantics and proofs (\url{https://dl.acm.org/citation.cfm?id=3236785})
+
+      \item Generic Syntax library (\url{https://github.com/gallais/generic-syntax})
     \end{itemize}
   \item User Interactions:
     \begin{itemize}
