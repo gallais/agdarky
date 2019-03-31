@@ -5,6 +5,9 @@ open import Data.List.Base as List
 open import Data.Nat.Base
 open import Generic.Syntax
 
+------------------------------------------------------------------------
+-- SYNTAX: description in the universe of syntaxes with binding
+
 -- Hutton's Razor reloaded
 -- This time we take: H = x | n | H + H
 -- where n is a natural number
@@ -14,17 +17,22 @@ data Tag : Set where
 
 hutton : Desc ⊤
 
--- it declares two constructors
--- (the _+_ operator we have already seen and a literal)
+-- it uses a Tag to distinguish two constructors:
+-- the _+_ operator we have already seen
+-- and a constructor for literals
 
 hutton = `σ Tag λ where
   Add → `X [] _ (`X [] _ (`∎ _))
   Lit → `σ ℕ λ _ → `∎ _
 
--- comment on `σ (used twice but with different meanings)
+-- `σ is used in one case to offer a choice of construtors and in another
+-- to store a value in a constructor.
 
 open import Data.Product
 open import Relation.Binary.PropositionalEquality
+
+-- We can once more introduce pattern synonyms to hide the fact that we
+-- are using an encoding
 
 pattern add' l r = (Add , l , r  , refl)
 pattern add l r  = `con (add' l r)
@@ -38,7 +46,10 @@ pattern lit n = `con (lit' n)
 five : TM hutton _
 five = lit 5
 
+------------------------------------------------------------------------
+-- SEMANTICS: scope-and-type preserving fold-like traversal
 
+-- We can once more define our language's denotational semantics
 
 open import Data.Nat.Base
 open import var
@@ -47,6 +58,8 @@ open import Generic.Semantics
 
 Value : ⊤ ─Scoped
 Value _ _ = ℕ
+
+-- It is essentially the same except for the new lit' case we had to add.
 
 Eval : Sem hutton Value Value
 Sem.th^𝓥 Eval = λ v ρ → v
@@ -60,15 +73,23 @@ eval = Sem.closed Eval
 
 -- 5 + 5 ≡ 10
 
-_ : eval (add five five) ≡ 10
+_ : eval (double five) ≡ 10
 _ = refl
+
+------------------------------------------------------------------------
+
+-- But we can also have more subtle semantics e.g. constant folding:
+-- where values are now terms of the language itself.
 
 open import Generic.Semantics.Syntactic
 
 Fold : Sem hutton (Tm hutton _) (Tm hutton _)
-Sem.th^𝓥 Fold = th^Tm
-Sem.var   Fold = λ t → t
+Sem.th^𝓥 Fold = th^Tm    -- generic lemma: terms are always thinnable
+Sem.var   Fold = λ t → t  -- values and result are the same type
 Sem.alg   Fold = λ where
+-- Here is the interesting part: we are simplifying the terms.
+-- Note that the subterms l and r in the pattern (add' l r) have
+-- already been simplified.
   (add' (lit 0) t)       → t
   (add' t (lit 0))       → t
   (add' (lit m) (lit n)) → lit (m + n)
@@ -85,20 +106,33 @@ _ : fold 3 (add (add (lit 0) (add (`var (s (s z))) (lit 0)))
   ≡ add (`var (s (s z))) (lit 7)
 _ = refl
 
+-- Or even more subtle ones where we collapse *all* constants and quotient
+-- the tree modulo associativity
+
+-- Values are then a constant together with a list of variables read from left
+-- to right in the tree:
+
 record Essence (_ : ⊤) (Γ : List ⊤) : Set where
   constructor _:+_
   field literal   : ℕ
         variables : List (Var _ Γ)
 
-Simpl : Sem hutton Essence Essence
-Sem.th^𝓥 Simpl = λ where (n :+ xs) ρ → n :+ List.map (λ v → th^Var v ρ) xs
-Sem.var   Simpl = λ s → s
+-- Variables are interpreted as themselves and the computation delivers the
+-- 'essence' of a computation.
+
+Simpl : Sem hutton Var Essence
+Sem.th^𝓥 Simpl = th^Var                 -- Variables are always thinnable (≈ renaming)
+Sem.var   Simpl = λ s → (0 :+ (s ∷ [])) -- Their essence is the singleton list
 Sem.alg   Simpl = λ where
+  -- The addition of two essences yields a new one by:
+  -- taking the sum of both literals
+  -- appending the lists of variables (while respecting the left to right ordering)
   (add' (m :+ xs) (n :+ ys)) → (m + n) :+ (xs ++ ys)
+  -- The essence of a literal is its value together with the empty list of variables
   (lit' n)                   → n :+ []
 
 simplify : ∀ n → let Γ = List.replicate n _ in Tm hutton _ _ Γ → Tm hutton _ _ Γ
-simplify Γ t = let (n :+ xs) = Sem.sem Simpl (pack (λ v → 0 :+ (v ∷ []))) t in
+simplify Γ t = let (n :+ xs) = Sem.sem Simpl (pack (λ v → v)) t in
                List.foldl (λ t v → add t (`var v)) (lit n) xs
 
 
@@ -108,3 +142,5 @@ _ : simplify 3 (add (add (lit 3) (add (`var z) (`var (s z))))
                     (add (`var (s (s z))) (add (lit 2) (lit 10))))
   ≡ add (add (add (lit 15) (`var z)) (`var (s z))) (`var (s (s z)))
 _ = refl
+
+-- But all of this is really language specific...
