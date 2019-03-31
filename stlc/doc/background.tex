@@ -1,7 +1,14 @@
 \documentclass{beamer}
+\newcommand{\codehere}{
+\begin{center}
+{\large[Some code here]}
+\end{center}
+}
+
 \begin{document}
 
-\author{Guillaume ALLAIS}
+\author{Guillaume ALLAIS
+       \\ guillaume.allais@ens-lyon.org}
 \title{Scrap Your DSL Boilerplate\\
 With a Universe of Syntaxes With Binding}
 \institute{CoCoDo 2019}
@@ -21,6 +28,9 @@ With a Universe of Syntaxes With Binding}
     \end{itemize}
   \item Excited about running correct by construction code
 \end{itemize}
+\end{frame}
+
+\begin{frame}{Don't hesitate to ask questions}
 \end{frame}
 
 \begin{frame}{Background of this Work}
@@ -48,7 +58,7 @@ With a Universe of Syntaxes With Binding}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Intro to Agda}
+\begin{frame}{Intro to Agda: Description}
 Agda is:
 \begin{itemize}
   \item pure
@@ -71,4 +81,47 @@ Agda is:
 
 \end{frame}
 
+\begin{frame}{Intro to Agda: Interactive Programming}
+\codehere
+\end{frame}
+
+\begin{frame}{Warming up: Hutton's Razor}
+\codehere
+\end{frame}
+
+\begin{frame}{Generic Pass: Let-inlining}
+\codehere
+\end{frame}
+
+\begin{frame}{Generic Pass: Let-inlining, II}
+\begin{itemize}
+  \item Either: IR with usage counting for variables
+  \item Or: Different IR with usage information ("co-deBruijn")
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Going Further: Intro to Type Theory / Agda}
+
+\begin{itemize}
+  \item The Little Typer (\url{http://www.thelittletyper.com/})
+  \item Verified Functional Programming in Agda (\url{https://dl.acm.org/citation.cfm?id=2841316})
+  \item Programming Language Foundations in Agda (\url{https://plfa.github.io/})
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Going Further: This Tutorial's Dependencies}
+
+\begin{itemize}
+  \item Theory:
+    \begin{itemize}
+      \item Type-and-scope safe programs and their proofs (\url{https://dl.acm.org/citation.cfm?id=3018613})
+      \item A type and scope safe universe of syntaxes with binding: their semantics and proofs (\url{https://dl.acm.org/citation.cfm?id=3236785})
+    \end{itemize}
+  \item User Interactions:
+    \begin{itemize}
+      \item agdarsec -- Total Parser Combinators (\url{https://gallais.github.io/pdf/agdarsec18.pdf})
+      \item agdARGS -- Declarative Hierarchical Command Line Interfaces (\url{https://gallais.github.io/pdf/TTT-2017.pdf})
+    \end{itemize}
+\end{itemize}
+\end{frame}
 \end{document}

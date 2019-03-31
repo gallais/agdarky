@@ -1,0 +1,5 @@
+name: stlc
+include: .
+depend: standard-library
+      , agdarsec
+      , generic-syntax
