@@ -92,10 +92,8 @@ Sem.var   Eval = λ n → n
 Sem.alg   Eval = λ where
   (add' l r) → l + r
 
-
 -- We can evaluate terms by giving an interpretation to each of their variables
-eval : ∀ n → let Γ = List.replicate n _ in
-       (Γ ─Env) Value [] → Tm hutton _ _ Γ → ℕ
+eval : ∀ (n : ℕ) → let Γ = List.replicate n _ in (Γ ─Env) Value [] → Tm hutton _ _ Γ → ℕ
 eval n ρ t = Sem.sem Eval ρ t
 
 open import Relation.Binary.PropositionalEquality

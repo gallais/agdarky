@@ -131,9 +131,16 @@ Sem.alg   Simpl = λ where
   -- The essence of a literal is its value together with the empty list of variables
   (lit' n)                   → n :+ []
 
+open import Function
+
 simplify : ∀ n → let Γ = List.replicate n _ in Tm hutton _ _ Γ → Tm hutton _ _ Γ
-simplify Γ t = let (n :+ xs) = Sem.sem Simpl (pack (λ v → v)) t in
-               List.foldl (λ t v → add t (`var v)) (lit n) xs
+simplify Γ t = case Sem.sem Simpl (pack (λ v → v)) t of λ where
+  -- we clean up after ourselves: if the literal is 0,
+  -- we don't bother returning it
+  (0 :+ (x ∷ xs)) → List.foldl cons (`var x) xs
+  (n :+ xs)       → List.foldl cons (lit n) xs
+
+    where cons = λ t v → add t (`var v)
 
 
 -- (3 + (x₀ + x₁)) + (x₂ + (2 + 12)) ≡ 15 + x₀ + x₁ + x₂
@@ -142,5 +149,18 @@ _ : simplify 3 (add (add (lit 3) (add (`var z) (`var (s z))))
                     (add (`var (s (s z))) (add (lit 2) (lit 10))))
   ≡ add (add (add (lit 15) (`var z)) (`var (s z))) (`var (s (s z)))
 _ = refl
+
+-- ((x₀ + 0) + x₁) + (x₂ + (x₀ + x₀)) ≡ x₀ + x₁ + x₂ + x₀ + x₀
+
+_ : simplify 3 (add (add (add (`var z) (lit 0)) (`var (s z)))
+                    (add (`var (s (s z))) (add (`var z) (`var z))))
+  ≡ add (add (add (add (`var z)
+                       (`var (s z)))
+                       (`var (s (s z))))
+                       (`var z))
+                       (`var z)
+_ = refl
+
+
 
 -- But all of this is really language specific...
