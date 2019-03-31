@@ -87,18 +87,23 @@ Agda is:
 \end{frame}
 
 \begin{frame}{Warming up: Hutton's Razor(s)}
-  \codehere{Hutton/Base}
-  \codehere{Hutton/Constant}
+  \href{run:Hutton/Base.agda}{Hutton.Base}
+  \href{run:Hutton/Constant.agda}{Hutton.Constant}
 \end{frame}
 
 \begin{frame}{Generic Pass: Let-inlining}
-\codehere{Generic/Semantics/Elaboration/LetBinder}
+  \href{run:/home/gallais/projects/generic-syntax/src/Generic/Syntax/LetBinder.agda}{Let Binders}
+  \newline
+  \href{run:/home/gallais/projects/generic-syntax/src/Generic/Semantics/Elaboration/LetBinder.agda}{Elaboration}
 \end{frame}
 
 \begin{frame}{Generic Pass: Let-inlining, II}
 \begin{itemize}
   \item Either: IR with usage counting for variables
-    \codehere{Generic/Semantics/Elaboration/LetCounter}
+    \newline
+    \href{run:/home/gallais/projects/generic-syntax/src/Generic/Syntax/LetCounter.agda}{Let Counters}
+    \newline
+    \href{run:/home/gallais/projects/generic-syntax/src/Generic/Semantics/Elaboration/LetCounter.agda}{Elaboration}
 
   \item Or: Different IR with usage information ("co-deBruijn")
 \end{itemize}
