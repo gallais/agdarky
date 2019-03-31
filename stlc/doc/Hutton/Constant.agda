@@ -1,7 +1,7 @@
 module Hutton.Constant where
 
 open import Data.Unit
-open import Data.List.Base
+open import Data.List.Base as List
 open import Data.Nat.Base
 open import Generic.Syntax
 
@@ -48,15 +48,37 @@ open import Generic.Semantics
 Value : ⊤ ─Scoped
 Value _ _ = ℕ
 
-sem : Sem hutton Value Value
-Sem.th^𝓥 sem = λ v ρ → v
-Sem.var   sem = λ n → n
-Sem.alg   sem = λ where
+Eval : Sem hutton Value Value
+Sem.th^𝓥 Eval = λ v ρ → v
+Sem.var   Eval = λ n → n
+Sem.alg   Eval = λ where
   (add' l r) → l + r
   (lit' n)   → n
 
 eval : TM hutton _ → ℕ
-eval = Sem.closed sem
+eval = Sem.closed Eval
 
 _ : eval (add five five) ≡ 10
+_ = refl
+
+record Essence (_ : ⊤) (Γ : List ⊤) : Set where
+  constructor _:+_
+  field literal   : ℕ
+        variables : List (Var _ Γ)
+
+Simpl : Sem hutton Essence Essence
+Sem.th^𝓥 Simpl = λ where (n :+ xs) ρ → n :+ List.map (λ v → th^Var v ρ) xs
+Sem.var   Simpl = λ s → s
+Sem.alg   Simpl = λ where
+  (add' (m :+ xs) (n :+ ys)) → (m + n) :+ (xs ++ ys)
+  (lit' n)                   → n :+ []
+
+simplify : ∀ n → let Γ = List.replicate n _ in Tm hutton _ _ Γ → Tm hutton _ _ Γ
+simplify Γ t = let (n :+ xs) = Sem.sem Simpl (pack (λ v → 0 :+ (v ∷ []))) t in
+               List.foldl (λ t v → add t (`var v)) (lit n) xs
+
+
+_ : simplify 3 (add (add (lit 3) (add (`var z) (`var (s z))))
+                    (add (`var (s (s z))) (add (lit 2) (lit 10))))
+  ≡ add (add (add (lit 15) (`var z)) (`var (s z))) (`var (s (s z)))
 _ = refl
